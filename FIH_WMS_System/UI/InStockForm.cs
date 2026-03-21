@@ -1,4 +1,6 @@
-﻿using System;
+﻿using FIH_WMS_System.Models;
+using FIH_WMS_System.Services;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -9,6 +11,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using System.Collections.Generic; // 引用来使用 Dictionary
+
 namespace FIH_WMS_System.UI
 {
     /// <summary>
@@ -16,6 +20,8 @@ namespace FIH_WMS_System.UI
     /// </summary>
     public partial class InStockForm : Form
     {
+        private WmsService wmsService = new WmsService();
+
         public InStockForm()
         {
             InitializeComponent();
@@ -92,7 +98,80 @@ namespace FIH_WMS_System.UI
                 MessageBox.Show("警告：入库数量必须填入纯数字！", "输入错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+
+
+
+        // 1. 窗体加载时，初始化“入库策略”下拉框
+        //用字典把英文枚举翻译成中文显示
+        private void InStockForm_Load(object sender, EventArgs e)
+        {
+            // 创建一个字典，左边是系统认识的枚举，右边是人看的中文
+            //Dictionary<InboundStrategy, string>：这是一个键值对集合
+            //WinForms 的下拉框就知道：当用户看到并点击“3. 按空库位入库 (不混放)”时，它实际选中的底层数据是 InboundStrategy.EmptyLocationFirst
+            var strategyDict = new Dictionary<InboundStrategy, string>
+            {
+                { InboundStrategy.Manual, "Manual-直接人工指定" },
+                { InboundStrategy.SameMaterialMerge, "SameMaterialMerge-按未满库位入库 (推荐合并)" },
+                { InboundStrategy.EmptyLocationFirst, "EmptyLocationFirst-按空库位入库 (不混放)" },
+                { InboundStrategy.NearestFirst, "NearestFirst-按就近库位入库 (最高效)" }
+            };
+
+            // 绑定到下拉框
+            cmbStrategy.DataSource = new BindingSource(strategyDict, null);
+            cmbStrategy.DisplayMember = "Value"; // 表面上给用户看字典的 Value（中文）
+            cmbStrategy.ValueMember = "Key";     // 骨子里给代码传字典的 Key（枚举）
+
+            // 默认选中 "按未满库位入库"
+            cmbStrategy.SelectedValue = InboundStrategy.SameMaterialMerge;
+        }
+
+
+
+        // 2. 触发智能推荐
+        private void btnRecommend_Click(object sender, EventArgs e)
+        {
+            string goodsCode = txtGoodsCode.Text.Trim();
+
+            if (string.IsNullOrEmpty(goodsCode))
+            {
+                MessageBox.Show("请先输入物料编码！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 获取用户当前选择的策略
+            //InboundStrategy selectedStrategy = (InboundStrategy)cmbStrategy.SelectedItem;
+
+            // 【关键修改】：因为用了字典绑定，这里要用 SelectedValue 获取背后的枚举
+            //SelectedValue：配合上面的绑定方式，我们现在需要用 SelectedValue 而不是 SelectedItem 来抓取真正的枚举值传给 WmsService
+            InboundStrategy selectedStrategy = (InboundStrategy)cmbStrategy.SelectedValue;
+
+            // 召唤服务层的大脑
+            string recommendLoc = wmsService.GetRecommendLocation(goodsCode, selectedStrategy);
+
+            if (!string.IsNullOrEmpty(recommendLoc))
+            {
+                txtLocCode.Text = recommendLoc;
+                //MessageBox.Show($"💡 智能引擎已为您推荐最佳库位：【{recommendLoc}】\n策略：{selectedStrategy}",
+                //                "智能推荐成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                string strategyName = cmbStrategy.Text; // 抓取下拉框表面显示的中文文字
+                MessageBox.Show($"💡 智能引擎已为您推荐最佳库位：【{recommendLoc}】\n策略：{strategyName}",
+                                "智能推荐成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                // 如果是人工指定，或者仓库真的爆满没位置了
+                if (selectedStrategy == InboundStrategy.Manual)
+                {
+                    MessageBox.Show("您选择了【人工指定】，请手动输入目标库位。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("⚠️ 仓库当前可能已满，或未找到符合策略的可用库位，请人工确认！", "系统警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+
+
+
     }
-
-
 }

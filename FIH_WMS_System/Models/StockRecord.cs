@@ -7,30 +7,82 @@ using System.Threading.Tasks;
 namespace FIH_WMS_System.Models
 {
     /// <summary>
-    /// 出入库记录
+    /// 库存操作记录(流水账) 模型
+    /// 无论入库、出库、移库、盘点，任何库存数量的变化都要在这里记录一笔
     /// </summary>
     public class StockRecord
     {
-        /*
+        /// <summary>
+        /// 主键，数据库自增ID
+        /// </summary>
         public int Id { get; set; }
-        public RecordType Type { get; set; }
+
+        /// <summary>
+        /// 关联的单据号 (比如入库单号、出库单号或盘点单号)
+        /// </summary>
+        public string OrderNo { get; set; }
+
+        /// <summary>
+        /// 记录类型 (如：0表示入库, 1表示出库, 2表示盘点调整等)
+        /// </summary>
+        public int RecordType { get; set; }
+
+        /// <summary>
+        /// 【关键修复】：兼容原有 UI 代码的 Type 属性，做个巧妙的转换
+        /// 这样 MainForm.cs 里的 r.Type 就能继续正常工作
+        /// </summary>
+        public RecordType Type
+        {
+            get { return (RecordType)this.RecordType; }
+            set { this.RecordType = (int)value; }
+        }
+
+
+
+        /// <summary>
+        /// 物料编码
+        /// </summary>
+        public string GoodsCode { get; set; }
+
+        /// <summary>
+        /// 物料实体对象 (导航属性，方便UI显示)
+        /// </summary>
         public Goods? Goods { get; set; }
+
+        /// <summary>
+        /// 操作涉及的库位编码
+        /// </summary>
+        public string LocationCode { get; set; }
+
+        /// <summary>
+        /// 库位实体对象 (导航属性，方便UI显示)
+        /// </summary>
         public Location? Location { get; set; }
+
+        /// <summary>
+        /// 本次操作变动的数量
+        /// </summary>
         public int Qty { get; set; }
+
+        /// <summary>
+        /// 变动涉及的批次号
+        /// </summary>
+        public string BatchNo { get; set; }
+
+        /// <summary>
+        /// 本次操作发生的时间
+        /// </summary>
         public DateTime OperateTime { get; set; }
-        public string Operator { get; set; } = "admin";*/
 
-        public int Id { get; set; }
-        public string OrderNo { get; set; } = string.Empty; // 【新增】关联的单据号，表明这笔流水是因为执行哪个订单产生的
-        public RecordType Type { get; set; }                // 0:入库, 1:出库 (对应RecordType枚举)
+        /// <summary>
+        /// 操作人 (比如是具体的员工账号，或者是"System"/"AGV"代表自动操作)
+        /// </summary>
+        public string Operator { get; set; }
 
-        public Goods? Goods { get; set; }                   //商品编码
-        public Location? Location { get; set; }             //库位编码
-
-        public int Qty { get; set; }                        //变动数量
-        public string BatchNo { get; set; } = string.Empty; // 【新增】批次号，记录具体动了哪个批次的货
-
-        public DateTime OperateTime { get; set; }           //操作时间，默认当前系统时间
-        public string Operator { get; set; } = "admin";     //操作人，默认admin，实际使用中可以改为当前登录用户
+        /// <summary>
+        /// 【新增字段】本次操作对应的唯一条码编号 (ReelId)
+        /// 方便后续追踪某个特定条码的完整生命周期(什么时候入库，什么时候出库)
+        /// </summary>
+        public string ReelId { get; set; }
     }
 }

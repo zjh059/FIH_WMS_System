@@ -298,9 +298,19 @@ namespace FIH_WMS_System.Services
         // 5. 智能分配库位算法 (入库规则引擎)
         //入库规则包括：按未满库位入库（减少库位物料碎片）以及按空库位入库（不与原库位物料混合存储）
         // ==========================================
-        public string GetRecommendLocation(string goodsCode)
+        //(接入全新入库规则引擎)3月20
+        //加了 strategy 参数，并给了默认值 SameMaterialMerge (未满库位优先)。
+        // 这样以前的 UI 代码直接调用 GetRecommendLocation("G001") 也不会报错。
+        // ==========================================
+        //松耦合设计：未将复杂的判断写在 WmsService 里，而是抽离到了 InboundRuleEngine 中。
+        //以后如果有“我要加一个新的入库规则”，只需要修改 InboundRuleEngine.cs 即可。
+        //WmsService 的代码几乎不用动，此为高内聚低耦合
+        // ==========================================
+        //public string GetRecommendLocation(string goodsCode)
+        public string GetRecommendLocation(string goodsCode, InboundStrategy strategy = InboundStrategy.SameMaterialMerge)
         {
-            using (var db = new SqlConnection(connStr))
+
+/*            using (var db = new SqlConnection(connStr))
             {
                 // (1)按未满库位入库（减少碎片）
                 // 先去库存表里找找，有没有哪个库位已经放了这个商品了？如果有，我们就推荐跟它放在一起。
@@ -324,7 +334,42 @@ namespace FIH_WMS_System.Services
 
                 // (3)如果都没找到，说明整个仓库连一个空位都没有了，爆仓了！
                 return string.Empty;
+            }*/
+
+            // 如果用户选择了“人工指定”，系统就不用费劲推荐了
+            if (strategy == InboundStrategy.Manual)
+            {
+                return string.Empty;
             }
+
+            using (var db = new SqlConnection(connStr))
+            {
+                // 1. 收集情报：查出当前仓库里所有的库位 (给大脑提供地图)
+                var allLocations = db.Query<Location>("SELECT * FROM Location").ToList();
+
+                // 2. 收集情报：查出当前仓库里所有非空的库存 (给大脑提供当前战况)
+                // 只查 Qty > 0 的，如果 Qty 是 0 说明那个库存记录是空的
+                var currentStocks = db.Query<Stock>("SELECT * FROM Stock WHERE Qty > 0").ToList();
+
+                // 3. 召唤大脑：实例化我们的入库规则引擎
+                var engine = new InboundRuleEngine();
+
+                // 4. 开始计算：把物料、地图、战况、策略 喂给引擎
+                Location recommendedLoc = engine.RecommendLocation(goodsCode, allLocations, currentStocks, strategy);
+
+                // 5. 返回结果：如果引擎算出来了，就返回库位编码；否则返回空字符串表示“没找到合适位置”
+                if (recommendedLoc != null)
+                {
+                    return recommendedLoc.Code;
+                }
+                else
+                {
+                    return string.Empty; // 比如仓库全满的时候
+                }
+            }
+
+
+
         }
 
 
@@ -645,6 +690,124 @@ namespace FIH_WMS_System.Services
                 string sql = "SELECT * FROM Users WHERE Username = @u AND Password = @p";
                 var user = db.QueryFirstOrDefault<Models.User>(sql, new { u = username, p = password });
                 return user; // 如果密码错了或没这人，会返回 null
+            }
+        }
+
+
+
+        // ==========================================
+        // 获取智能出库拣货建议 (只查询，不扣减，目前用于UI显示)
+        // ==========================================
+        public List<Stock> GetOutboundPickAdvice(string goodsCode, int requiredQty, OutboundStrategy strategy = OutboundStrategy.FIFO)
+        {
+            using (var db = new SqlConnection(connStr))
+            {
+                // 1. 获取所有非空库存
+                var currentStocks = db.Query<Stock>("SELECT * FROM Stock WHERE Qty > 0").ToList();
+
+                // 2. 召唤出库大脑进行优先级排序
+                var engine = new OutboundRuleEngine();
+                var sortedStocks = engine.RecommendOutboundStocks(goodsCode, currentStocks, strategy);
+
+                // 3. 按照所需数量，模拟拣货拼凑过程
+                var pickList = new List<Stock>();
+                int remainQty = requiredQty;
+
+                foreach (var stock in sortedStocks)
+                {
+                    if (remainQty <= 0) break; // 已经凑够了，停止寻找
+
+                    int availableQty = stock.Qty - stock.FrozenQty;
+                    if (availableQty <= 0) continue;
+
+                    // 计算这个库位本次需要拿走多少
+                    int pickQty = Math.Min(availableQty, remainQty);
+
+                    // 克隆一个 Stock 对象，把 Qty 替换成【建议拿走的数量】
+                    pickList.Add(new Stock
+                    {
+                        Id = stock.Id,
+                        LocationCode = stock.LocationCode,
+                        BatchNo = stock.BatchNo,
+                        Qty = pickQty,
+                        InStockTime = stock.InStockTime
+                    });
+
+                    remainQty -= pickQty;
+                }
+
+                return pickList;
+            }
+        }
+
+        // ==========================================
+        // 智能出库执行 (WMS + WCS 融合版升级)
+        // ==========================================
+        public bool SmartOutStock(string goodsCode, int qty, string orderNo = "AUTO-OUT-001", OutboundStrategy strategy = OutboundStrategy.FIFO)
+        {
+            if (qty <= 0) return false;
+
+            // 1. 先调用上面的建议方法，看库存到底够不够
+            var pickAdvice = GetOutboundPickAdvice(goodsCode, qty, strategy);
+            int totalAvailable = pickAdvice.Sum(p => p.Qty);
+
+            if (totalAvailable < qty)
+            {
+                return false; // 整个仓库的可用库存加起来都不够！
+            }
+
+            using (var db = new SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 2. 遍历拣货建议列表，按计划挨个扣除
+                        foreach (var pick in pickAdvice)
+                        {
+                            // 查出现有真实库存
+                            var stockInDb = db.QueryFirstOrDefault<Stock>("SELECT Id, Qty FROM Stock WHERE Id = @id", new { id = pick.Id }, transaction);
+                            if (stockInDb == null) throw new Exception("库存数据异常");
+
+                            if (stockInDb.Qty == pick.Qty)
+                                db.Execute("DELETE FROM Stock WHERE Id = @id", new { id = pick.Id }, transaction);
+                            else
+                                db.Execute("UPDATE Stock SET Qty = Qty - @pickQty WHERE Id = @id", new { pickQty = pick.Qty, id = pick.Id }, transaction);
+
+                            // 记流水账
+                            db.Execute(@"INSERT INTO StockRecord (RecordType, OrderNo, GoodsCode, LocationCode, Qty, BatchNo, OperateTime, Operator) 
+                                         VALUES (1, @order, @gCode, @lCode, @qty, @batch, GETDATE(), @opName)",
+                                         new
+                                         {
+                                             order = orderNo,
+                                             gCode = goodsCode,
+                                             lCode = pick.LocationCode,
+                                             qty = pick.Qty,
+                                             batch = pick.BatchNo,
+                                             opName = FIH_WMS_System.Program.CurrentUsername
+                                         }, transaction);
+
+                            // 检查库位是否彻底空了，空了就释放掉 (IsUsed = 0)
+                            var remain = db.ExecuteScalar<int>("SELECT COUNT(1) FROM Stock WHERE LocationCode = @lCode", new { lCode = pick.LocationCode }, transaction);
+                            if (remain == 0) db.Execute("UPDATE Location SET IsUsed = 0 WHERE Code = @lCode", new { lCode = pick.LocationCode }, transaction);
+
+                            // 【联动 AGV】呼叫小车去对应的库位拿货！
+                            string agvTaskNo = "AGV-" + DateTime.Now.ToString("yyyyMMddHHmmss") + "-" + pick.Id;
+                            db.Execute(@"INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) 
+                                         VALUES (@tNo, 1, 0, @gCode, @qty, @fromLoc, '产线接驳口1', GETDATE())",
+                                         new { tNo = agvTaskNo, gCode = goodsCode, qty = pick.Qty, fromLoc = pick.LocationCode }, transaction);
+                        }
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback(); // 如果中间任何一步报错（比如断网），全部撤销，保护数据！
+                        return false;
+                    }
+                }
             }
         }
 
