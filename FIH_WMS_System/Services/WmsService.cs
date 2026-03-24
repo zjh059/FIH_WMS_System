@@ -812,6 +812,107 @@ namespace FIH_WMS_System.Services
         }
 
 
+        // ==========================================
+        // 智能盘点 - 1. 根据条件生成盘点清单
+        // ==========================================
+        public List<StockCountItem> GenerateCountList(int countType, string keyword)
+        {
+            // countType 规则约定: 0=按单一库位盘点, 1=按指定物料盘点, 2=全仓盲盘 (对应文档的多方式盘点要求)
+            using (var db = new SqlConnection(connStr))
+            {
+                // 基础 SQL：关联查询库存和商品名称
+                string sql = @"
+                    SELECT s.Id as StockId, s.GoodsCode, g.Name as GoodsName, 
+                           s.LocationCode, s.BatchNo, s.Qty as SystemQty, 
+                           s.Qty as PhysicalQty -- 初始让实盘等于账面
+                    FROM Stock s
+                    INNER JOIN Goods g ON s.GoodsCode = g.Code
+                    WHERE s.Qty > 0";
+
+                // 动态拼接查询条件
+                if (countType == 0 && !string.IsNullOrEmpty(keyword))
+                {
+                    sql += " AND s.LocationCode = @kw";
+                }
+                else if (countType == 1 && !string.IsNullOrEmpty(keyword))
+                {
+                    sql += " AND s.GoodsCode = @kw";
+                }
+
+                // 按照库位和商品排序，方便工人按顺序去数
+                sql += " ORDER BY s.LocationCode, s.GoodsCode";
+
+                return db.Query<StockCountItem>(sql, new { kw = keyword }).ToList();
+            }
+        }
+
+        // ==========================================
+        // 智能盘点 - 2. 批量提交盘点差异并一键平账
+        // ==========================================
+        public bool SubmitBatchCountResult(List<StockCountItem> countList)
+        {
+            // 过滤出真正产生了差异的记录（如果实盘和账面一样，就不浪费数据库性能去更新了）
+            var changedItems = countList.Where(x => x.Difference != 0).ToList();
+            if (changedItems.Count == 0) return true; // 全都账实相符，直接返回成功
+
+            string orderNo = "CHECK-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+
+            using (var db = new SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        foreach (var item in changedItems)
+                        {
+                            // 1. 更新库存表
+                            if (item.PhysicalQty == 0)
+                            {
+                                // 盘点发现货完全没了，删除记录
+                                db.Execute("DELETE FROM Stock WHERE Id = @id", new { id = item.StockId }, transaction);
+
+                                // 检查库位是否彻底空了，释放库位
+                                var remain = db.ExecuteScalar<int>("SELECT COUNT(1) FROM Stock WHERE LocationCode = @lCode", new { lCode = item.LocationCode }, transaction);
+                                if (remain == 0) db.Execute("UPDATE Location SET IsUsed = 0 WHERE Code = @lCode", new { lCode = item.LocationCode }, transaction);
+                            }
+                            else
+                            {
+                                // 直接将库存更新为真实的物理数量
+                                db.Execute("UPDATE Stock SET Qty = @qty WHERE Id = @id", new { qty = item.PhysicalQty, id = item.StockId }, transaction);
+                            }
+
+                            // 2. 记一笔盘盈/盘亏流水账
+                            int recordType = item.Difference > 0 ? 0 : 1; // 差异>0算入库(盘盈)，<0算出库(盘亏)
+                            int changeQty = Math.Abs(item.Difference);    // 流水里只记变动的绝对值
+
+                            db.Execute(@"INSERT INTO StockRecord (RecordType, OrderNo, GoodsCode, LocationCode, Qty, BatchNo, OperateTime, Operator) 
+                                         VALUES (@rType, @order, @gCode, @lCode, @qty, @batch, GETDATE(), @opName)",
+                                         new
+                                         {
+                                             rType = recordType,
+                                             order = orderNo,
+                                             gCode = item.GoodsCode,
+                                             lCode = item.LocationCode,
+                                             qty = changeQty,
+                                             batch = item.BatchNo,
+                                             opName = FIH_WMS_System.Program.CurrentUsername
+                                         }, transaction);
+                        }
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
+
 
     }
 }

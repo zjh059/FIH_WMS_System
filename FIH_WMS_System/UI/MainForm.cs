@@ -90,22 +90,69 @@ namespace FIH_WMS_System
             }
         }
 
+        // 出库按钮的事件处理器，包含了人工指定和智能出库两种场景的逻辑
         private void uiButton2_Click(object sender, EventArgs e)
         {
             OutStockForm form = new OutStockForm();
             if (form.ShowDialog() == DialogResult.OK)
             {
-                // 呼叫 OutStock 出库!
-                bool success = wms.OutStock(form.InputGoodsCode, form.InputQty, form.InputLocCode);
-
-                if (success)
+                // --- 场景 A：人工指定模式 ---
+                if (form.InputStrategy == Services.OutboundStrategy.Manual)
                 {
-                    MessageBox.Show("🎉 出库成功！数据已更新。", "系统提示");
-                    uiButton3_Click(null, null);
+                    if (string.IsNullOrEmpty(form.InputLocCode))
+                    {
+                        MessageBox.Show("人工指定策略下，请务必填写【出库库位】！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    bool success = wms.OutStock(form.InputGoodsCode, form.InputQty, form.InputLocCode);
+                    if (success)
+                    {
+                        MessageBox.Show("🎉 人工出库成功！数据已更新。", "系统提示");
+                        uiButton3_Click(null, null); // ✅ 成功后刷新表格！
+                    }
+                    else
+                    {
+                        MessageBox.Show("❌ 出库失败：请检查库位是否存在或库存是否充足！", "系统警告");
+                    }
                 }
+                // --- 场景 B：智能出库模式 ---
                 else
                 {
-                    MessageBox.Show("❌ 出库失败：可能商品编码或库位不存在，或者库存不足！", "系统警告");
+                    // 1. 找智能大脑要拣货建议
+                    var adviceList = wms.GetOutboundPickAdvice(form.InputGoodsCode, form.InputQty, form.InputStrategy);
+                    int totalAvailable = adviceList.Sum(x => x.Qty);
+
+                    if (adviceList.Count == 0 || totalAvailable < form.InputQty)
+                    {
+                        MessageBox.Show($"库存严重不足！\n当前可用总数仅剩: {totalAvailable} 个。", "系统警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    // 2. 拼接提示给操作员看
+                    string adviceMsg = $"系统为您生成了最佳拣货路径：\n\n";
+                    foreach (var pick in adviceList)
+                    {
+                        adviceMsg += $"👉 去库位【{pick.LocationCode}】取出 {pick.Qty} 个 (批次:{pick.BatchNo})\n";
+                    }
+                    adviceMsg += "\n是否确认立即出库，并指派 AGV 小车？";
+
+                    // 3. 弹窗确认
+                    if (MessageBox.Show(adviceMsg, "智能出库确认", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    {
+                        string autoOrderNo = "AUTO-OUT-" + DateTime.Now.ToString("HHmmss");
+                        bool success = wms.SmartOutStock(form.InputGoodsCode, form.InputQty, autoOrderNo, form.InputStrategy);
+
+                        if (success)
+                        {
+                            MessageBox.Show("🎉 智能出库执行成功！相关 AGV 任务已生成。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            uiButton3_Click(null, null); // ✅ 成功后瞬间刷新表格！
+                        }
+                        else
+                        {
+                            MessageBox.Show("出库执行失败，请重试。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
                 }
             }
         }
