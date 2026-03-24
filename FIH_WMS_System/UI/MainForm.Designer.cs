@@ -28,11 +28,11 @@
         /// </summary>
         private void InitializeComponent()
         {
-            DataGridViewCellStyle dataGridViewCellStyle11 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle12 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle13 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle14 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle15 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle21 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle22 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle23 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle24 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle25 = new DataGridViewCellStyle();
             pictureBox1 = new PictureBox();
             label1 = new Label();
             uiButton1 = new Sunny.UI.UIButton();
@@ -55,9 +55,9 @@
             // pictureBox1
             // 
             pictureBox1.Image = Properties.Resources.images;
-            pictureBox1.Location = new Point(39, 82);
+            pictureBox1.Location = new Point(3, 31);
             pictureBox1.Name = "pictureBox1";
-            pictureBox1.Size = new Size(307, 123);
+            pictureBox1.Size = new Size(298, 143);
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
             pictureBox1.TabIndex = 0;
             pictureBox1.TabStop = false;
@@ -75,7 +75,7 @@
             // uiButton1
             // 
             uiButton1.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton1.Location = new Point(82, 270);
+            uiButton1.Location = new Point(82, 243);
             uiButton1.MinimumSize = new Size(1, 1);
             uiButton1.Name = "uiButton1";
             uiButton1.Size = new Size(219, 61);
@@ -87,7 +87,7 @@
             // uiButton2
             // 
             uiButton2.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton2.Location = new Point(82, 347);
+            uiButton2.Location = new Point(82, 320);
             uiButton2.MinimumSize = new Size(1, 1);
             uiButton2.Name = "uiButton2";
             uiButton2.Size = new Size(219, 61);
@@ -99,7 +99,7 @@
             // uiButton3
             // 
             uiButton3.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton3.Location = new Point(82, 425);
+            uiButton3.Location = new Point(82, 398);
             uiButton3.MinimumSize = new Size(1, 1);
             uiButton3.Name = "uiButton3";
             uiButton3.Size = new Size(219, 61);
@@ -111,7 +111,7 @@
             // uiButton4
             // 
             uiButton4.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton4.Location = new Point(82, 502);
+            uiButton4.Location = new Point(82, 475);
             uiButton4.MinimumSize = new Size(1, 1);
             uiButton4.Name = "uiButton4";
             uiButton4.Size = new Size(219, 61);
@@ -122,46 +122,46 @@
             // 
             // dataGridView1
             // 
-            dataGridViewCellStyle11.BackColor = Color.FromArgb(235, 243, 255);
-            dataGridView1.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle11;
+            dataGridViewCellStyle21.BackColor = Color.FromArgb(235, 243, 255);
+            dataGridView1.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle21;
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dataGridView1.BackgroundColor = Color.White;
             dataGridView1.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
-            dataGridViewCellStyle12.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle12.BackColor = Color.FromArgb(80, 160, 255);
-            dataGridViewCellStyle12.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            dataGridViewCellStyle12.ForeColor = Color.White;
-            dataGridViewCellStyle12.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle12.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle12.WrapMode = DataGridViewTriState.True;
-            dataGridView1.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle12;
+            dataGridViewCellStyle22.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle22.BackColor = Color.FromArgb(80, 160, 255);
+            dataGridViewCellStyle22.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
+            dataGridViewCellStyle22.ForeColor = Color.White;
+            dataGridViewCellStyle22.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle22.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle22.WrapMode = DataGridViewTriState.True;
+            dataGridView1.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle22;
             dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle13.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle13.BackColor = SystemColors.Window;
-            dataGridViewCellStyle13.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            dataGridViewCellStyle13.ForeColor = Color.FromArgb(48, 48, 48);
-            dataGridViewCellStyle13.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle13.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle13.WrapMode = DataGridViewTriState.False;
-            dataGridView1.DefaultCellStyle = dataGridViewCellStyle13;
+            dataGridViewCellStyle23.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle23.BackColor = SystemColors.Window;
+            dataGridViewCellStyle23.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
+            dataGridViewCellStyle23.ForeColor = Color.FromArgb(48, 48, 48);
+            dataGridViewCellStyle23.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle23.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle23.WrapMode = DataGridViewTriState.False;
+            dataGridView1.DefaultCellStyle = dataGridViewCellStyle23;
             dataGridView1.EnableHeadersVisualStyles = false;
             dataGridView1.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
             dataGridView1.GridColor = Color.FromArgb(80, 160, 255);
             dataGridView1.Location = new Point(397, 243);
             dataGridView1.Name = "dataGridView1";
             dataGridView1.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
-            dataGridViewCellStyle14.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle14.BackColor = Color.FromArgb(235, 243, 255);
-            dataGridViewCellStyle14.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            dataGridViewCellStyle14.ForeColor = Color.FromArgb(48, 48, 48);
-            dataGridViewCellStyle14.SelectionBackColor = Color.FromArgb(80, 160, 255);
-            dataGridViewCellStyle14.SelectionForeColor = Color.White;
-            dataGridViewCellStyle14.WrapMode = DataGridViewTriState.True;
-            dataGridView1.RowHeadersDefaultCellStyle = dataGridViewCellStyle14;
+            dataGridViewCellStyle24.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle24.BackColor = Color.FromArgb(235, 243, 255);
+            dataGridViewCellStyle24.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
+            dataGridViewCellStyle24.ForeColor = Color.FromArgb(48, 48, 48);
+            dataGridViewCellStyle24.SelectionBackColor = Color.FromArgb(80, 160, 255);
+            dataGridViewCellStyle24.SelectionForeColor = Color.White;
+            dataGridViewCellStyle24.WrapMode = DataGridViewTriState.True;
+            dataGridView1.RowHeadersDefaultCellStyle = dataGridViewCellStyle24;
             dataGridView1.RowHeadersWidth = 72;
-            dataGridViewCellStyle15.BackColor = Color.White;
-            dataGridViewCellStyle15.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            dataGridView1.RowsDefaultCellStyle = dataGridViewCellStyle15;
+            dataGridViewCellStyle25.BackColor = Color.White;
+            dataGridViewCellStyle25.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
+            dataGridView1.RowsDefaultCellStyle = dataGridViewCellStyle25;
             dataGridView1.SelectedIndex = -1;
             dataGridView1.Size = new Size(1267, 580);
             dataGridView1.StripeOddColor = Color.FromArgb(235, 243, 255);
@@ -170,7 +170,7 @@
             // uiButton5
             // 
             uiButton5.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton5.Location = new Point(82, 579);
+            uiButton5.Location = new Point(82, 552);
             uiButton5.MinimumSize = new Size(1, 1);
             uiButton5.Name = "uiButton5";
             uiButton5.Size = new Size(219, 61);
@@ -182,7 +182,7 @@
             // uiButton6
             // 
             uiButton6.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton6.Location = new Point(82, 656);
+            uiButton6.Location = new Point(82, 629);
             uiButton6.MinimumSize = new Size(1, 1);
             uiButton6.Name = "uiButton6";
             uiButton6.Size = new Size(219, 61);
@@ -194,7 +194,7 @@
             // uiButton7
             // 
             uiButton7.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton7.Location = new Point(82, 733);
+            uiButton7.Location = new Point(82, 706);
             uiButton7.MinimumSize = new Size(1, 1);
             uiButton7.Name = "uiButton7";
             uiButton7.Size = new Size(219, 61);
@@ -206,7 +206,7 @@
             // btnSimulateAgv
             // 
             btnSimulateAgv.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            btnSimulateAgv.Location = new Point(1240, 894);
+            btnSimulateAgv.Location = new Point(665, 867);
             btnSimulateAgv.MinimumSize = new Size(1, 1);
             btnSimulateAgv.Name = "btnSimulateAgv";
             btnSimulateAgv.Size = new Size(424, 61);
@@ -218,7 +218,7 @@
             // uiButton8
             // 
             uiButton8.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton8.Location = new Point(82, 815);
+            uiButton8.Location = new Point(82, 788);
             uiButton8.MinimumSize = new Size(1, 1);
             uiButton8.Name = "uiButton8";
             uiButton8.Size = new Size(219, 61);
@@ -230,7 +230,7 @@
             // uiButton9
             // 
             uiButton9.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            uiButton9.Location = new Point(82, 894);
+            uiButton9.Location = new Point(82, 867);
             uiButton9.MinimumSize = new Size(1, 1);
             uiButton9.Name = "uiButton9";
             uiButton9.Size = new Size(219, 61);
@@ -257,7 +257,7 @@
             // 
             btnExportExcel.FillColor = Color.DarkGreen;
             btnExportExcel.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            btnExportExcel.Location = new Point(774, 894);
+            btnExportExcel.Location = new Point(1329, 867);
             btnExportExcel.MinimumSize = new Size(1, 1);
             btnExportExcel.Name = "btnExportExcel";
             btnExportExcel.Size = new Size(335, 61);
@@ -269,7 +269,7 @@
             // MainForm
             // 
             AutoScaleMode = AutoScaleMode.None;
-            ClientSize = new Size(1750, 1046);
+            ClientSize = new Size(1750, 1022);
             Controls.Add(btnExportExcel);
             Controls.Add(btnLogout);
             Controls.Add(uiButton9);

@@ -90,12 +90,22 @@ namespace FIH_WMS_System
             }
         }
 
-        // 出库按钮的事件处理器，包含了人工指定和智能出库两种场景的逻辑
+        // 出库按钮的事件处理器，包含了人工指定和智能出库两种场景的逻辑，以及BOM模式的特殊处理
         private void uiButton2_Click(object sender, EventArgs e)
         {
             OutStockForm form = new OutStockForm();
             if (form.ShowDialog() == DialogResult.OK)
             {
+                //判断如果是BOM模式完成的，直接语音播报 + 刷新！
+                if (form.IsBOMOutCompleted)
+                {
+                    Utils.VoiceHelper.Speak("产线工单出库已下发，AGV正在为您备料。");
+                    MessageBox.Show("🚀 BOM 智能出库执行成功！相关 AGV 任务已生成。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    uiButton3_Click(null, null); // 刷新表格
+                    return; // 搞定收工，直接退出，不要往下执行老逻辑了
+                }
+
+
                 // --- 场景 A：人工指定模式 ---
                 if (form.InputStrategy == Services.OutboundStrategy.Manual)
                 {
@@ -116,6 +126,7 @@ namespace FIH_WMS_System
                         MessageBox.Show("❌ 出库失败：请检查库位是否存在或库存是否充足！", "系统警告");
                     }
                 }
+
                 // --- 场景 B：智能出库模式 ---
                 else
                 {
@@ -217,26 +228,35 @@ namespace FIH_WMS_System
             dataGridView1.Columns["变动数量"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
         }
 
-        //🔄 库位移库
+        //🔄 库位移库与碎片整理
         private void uiButton5_Click(object sender, EventArgs e)
         {
             UI.MoveStockForm form = new UI.MoveStockForm();
             if (form.ShowDialog() == DialogResult.OK)
             {
-                // 调用我们刚刚在 WmsService 写好的大脑神技：MoveStock
-                bool success = wms.MoveStock(form.InputGoodsCode, form.InputFromLoc, form.InputToLoc, form.InputQty);
-
-                if (success)
+                // ---- 场景 A：智能碎片整理模式 ----
+                if (form.IsSmartMoveCompleted)
                 {
-                    Utils.VoiceHelper.Speak("移库操作已完成，流水账目已记录。");
-
-                    MessageBox.Show("🎉 移库成功！货品已转移，流水已记录。", "系统提示");
-                    // 顺手刷新一下库存查询表格，马上就能看到成果！
-                    uiButton3_Click(null, null);
+                    // 智能移库已经在子窗体内自己循环执行完毕了，这里只需要播报和刷新即可
+                    Utils.VoiceHelper.Speak("智能碎片整理完成，小车已前往调度。");
+                    MessageBox.Show("🎉 智能碎片整理成功！全仓库存已优化。", "系统提示");
+                    uiButton3_Click(null, null); // 刷新库存查询表格
                 }
+                // ---- 场景 B：传统人工移库模式 ----
                 else
                 {
-                    MessageBox.Show("❌ 移库失败：可能源库位不存在该商品，或者库存数量不足！", "系统警告");
+                    bool success = wms.MoveStock(form.InputGoodsCode, form.InputFromLoc, form.InputToLoc, form.InputQty);
+
+                    if (success)
+                    {
+                        Utils.VoiceHelper.Speak("移库操作已完成，流水账目已记录。");
+                        MessageBox.Show("🎉 人工移库成功！货品已转移，流水已记录。", "系统提示");
+                        uiButton3_Click(null, null); // 刷新库存查询表格
+                    }
+                    else
+                    {
+                        MessageBox.Show("❌ 移库失败：可能源库位不存在该商品，或者库存数量不足！", "系统警告");
+                    }
                 }
             }
         }
@@ -245,19 +265,13 @@ namespace FIH_WMS_System
         private void uiButton6_Click(object sender, EventArgs e)
         {
             UI.CheckStockForm form = new UI.CheckStockForm();
+
+            // 如果子窗体成功处理完盘点，并传回了 OK 信号
             if (form.ShowDialog() == DialogResult.OK)
             {
-                bool success = wms.AdjustStock(form.InputGoodsCode, form.InputLocCode, form.InputBatchNo, form.InputPhysicalQty);
-
-                if (success)
-                {
-                    MessageBox.Show("🎉 盘点完成！系统账目已修正，盘点流水已生成。", "系统提示");
-                    uiButton3_Click(null, null); // 刷新库存展示
-                }
-                else
-                {
-                    MessageBox.Show("❌ 盘点失败：无法找到指定的【商品+库位+批次】，请检查输入是否准确！", "系统警告");
-                }
+                // 主界面只需要负责弹窗庆祝，并刷新总表格即可！
+                MessageBox.Show("🎉 盘点完成！系统账目已修正，盘点流水已生成。", "系统提示");
+                uiButton3_Click(null, null); // 瞬间刷新右侧的主展示表格
             }
         }
 

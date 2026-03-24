@@ -913,6 +913,107 @@ namespace FIH_WMS_System.Services
         }
 
 
+        // ==========================================
+        // 智能引擎：全仓扫描，生成库位合并(碎片整理)建议
+        // ==========================================
+        public List<ConsolidationAdvice> GetConsolidationAdvice()
+        {
+            using (var db = new SqlConnection(connStr))
+            {
+                var adviceList = new List<ConsolidationAdvice>();
+
+                // 1. 找出所有“身首异处”的物料 (同一种商品，被分散存放在了 > 1 个库位里)
+                string sqlFindFragmented = @"
+                    SELECT GoodsCode 
+                    FROM Stock 
+                    WHERE Qty > 0 
+                    GROUP BY GoodsCode 
+                    HAVING COUNT(DISTINCT LocationCode) > 1";
+
+                var fragmentedGoodsCodes = db.Query<string>(sqlFindFragmented).ToList();
+
+                // 2. 针对每一个分散的物料，计算最佳合并路径
+                foreach (string gCode in fragmentedGoodsCodes)
+                {
+                    // 查出该物料在所有库位的情况，并【按数量从大到小排序】
+                    string sqlGetStocks = @"
+                        SELECT s.LocationCode, s.Qty, g.Name as GoodsName 
+                        FROM Stock s 
+                        INNER JOIN Goods g ON s.GoodsCode = g.Code 
+                        WHERE s.GoodsCode = @code AND s.Qty > 0 
+                        ORDER BY s.Qty DESC";
+
+                    // 使用 dynamic 动态接收连表查询的结果
+                    var stocks = db.Query(sqlGetStocks, new { code = gCode }).ToList();
+
+                    if (stocks.Count > 1)
+                    {
+                        // 策略：把数量最多的那个库位作为“大本营” (ToLocation)
+                        var targetStock = stocks.First();
+
+                        // 把其他数量较少的库位 (碎片)，全部建议搬到大本营去
+                        for (int i = 1; i < stocks.Count; i++)
+                        {
+                            var sourceStock = stocks[i];
+
+                            adviceList.Add(new ConsolidationAdvice
+                            {
+                                GoodsCode = gCode,
+                                GoodsName = targetStock.GoodsName,
+                                FromLocation = sourceStock.LocationCode,
+                                ToLocation = targetStock.LocationCode,
+                                MoveQty = (int)sourceStock.Qty
+                            });
+                        }
+                    }
+                }
+
+                return adviceList;
+            }
+        }
+
+
+        // ==========================================
+        // 智能制造：1. 分析 BOM 齐套性
+        // ==========================================
+        public List<BOMRequirement> AnalyzeBOM(string parentCode, int produceQty)
+        {
+            using (var db = new SqlConnection(connStr))
+            {
+                // 这段 SQL 非常强大：它不仅根据生产数量算出了总需求，还同时去查了真实可用库存
+                string sql = @"
+                    SELECT 
+                        b.ChildGoodsCode, 
+                        g.Name as ChildGoodsName, 
+                        CAST(b.RequiredQty * @qty AS INT) as RequiredTotalQty,
+                        ISNULL((SELECT SUM(Qty - FrozenQty) FROM Stock WHERE GoodsCode = b.ChildGoodsCode), 0) as CurrentAvailableQty
+                    FROM ProductBOM b
+                    LEFT JOIN Goods g ON b.ChildGoodsCode = g.Code
+                    WHERE b.ParentGoodsCode = @pCode";
+
+                return db.Query<BOMRequirement>(sql, new { qty = produceQty, pCode = parentCode }).ToList();
+            }
+        }
+
+        // ==========================================
+        // 智能制造：2. 一键执行 BOM 全套出库
+        // ==========================================
+        public bool ExecuteBOMOutbound(List<BOMRequirement> requirements, string orderNo, OutboundStrategy strategy = OutboundStrategy.FIFO)
+        {
+            // 遍历所有物料需求，依次调用我们之前写好的智能出库核心 SmartOutStock！
+            foreach (var req in requirements)
+            {
+                if (!req.IsEnough) return false; // 安全卡控：只要有一个物料不够，绝对不执行
+
+                // 复用智能出库逻辑，自动拼单、扣库存、呼叫 AGV
+                bool ok = SmartOutStock(req.ChildGoodsCode, req.RequiredTotalQty, orderNo, strategy);
+
+                if (!ok) return false; // 如果某个物料出库异常，立即中止
+            }
+            return true;
+        }
+
+
 
     }
 }

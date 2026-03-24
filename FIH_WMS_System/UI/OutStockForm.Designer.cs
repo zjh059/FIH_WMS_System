@@ -2,173 +2,277 @@
 {
     partial class OutStockForm
     {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
+            if (disposing && (components != null)) components.Dispose();
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
-
-        /// <summary>
-        /// Required method for Designer support - do not modify
-        /// the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
+            gbStandard = new GroupBox();
+            labelScanner = new Label();
+            txtScanner = new TextBox();
+            lblStrategy = new Label();
+            cmbStrategy = new ComboBox();
             label1 = new Label();
-            label2 = new Label();
             txtGoodsCode = new TextBox();
+            label2 = new Label();
             txtQty = new TextBox();
             label3 = new Label();
-            btnConfirm = new Button();
             txtLocCode = new TextBox();
-            label4 = new Label();
-            txtScanner = new TextBox();
-            label5 = new Label();
-            cmbStrategy = new ComboBox();
+            btnConfirm = new Button();
+            gbBOM = new GroupBox();
+            btnExecuteBOM = new Button();
+            dgvBOM = new DataGridView();
+            btnAnalyze = new Button();
+            txtProduceQty = new TextBox();
+            lblProduceQty = new Label();
+            txtProductCode = new TextBox();
+            lblProduct = new Label();
+            gbStandard.SuspendLayout();
+            gbBOM.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvBOM).BeginInit();
             SuspendLayout();
+            // 
+            // gbStandard
+            // 
+            gbStandard.Controls.Add(labelScanner);
+            gbStandard.Controls.Add(txtScanner);
+            gbStandard.Controls.Add(lblStrategy);
+            gbStandard.Controls.Add(cmbStrategy);
+            gbStandard.Controls.Add(label1);
+            gbStandard.Controls.Add(txtGoodsCode);
+            gbStandard.Controls.Add(label2);
+            gbStandard.Controls.Add(txtQty);
+            gbStandard.Controls.Add(label3);
+            gbStandard.Controls.Add(txtLocCode);
+            gbStandard.Controls.Add(btnConfirm);
+            gbStandard.Font = new Font("微软雅黑", 10F);
+            gbStandard.Location = new Point(40, 53);
+            gbStandard.Name = "gbStandard";
+            gbStandard.Size = new Size(1255, 331);
+            gbStandard.TabIndex = 0;
+            gbStandard.TabStop = false;
+            gbStandard.Text = "按单品出库 (常规模式)";
+            // 
+            // labelScanner
+            // 
+            labelScanner.AutoSize = true;
+            labelScanner.ForeColor = Color.Blue;
+            labelScanner.Location = new Point(39, 71);
+            labelScanner.Name = "labelScanner";
+            labelScanner.Size = new Size(140, 31);
+            labelScanner.TabIndex = 0;
+            labelScanner.Text = "扫码枪输入:";
+            // 
+            // txtScanner
+            // 
+            txtScanner.Location = new Point(185, 68);
+            txtScanner.Name = "txtScanner";
+            txtScanner.Size = new Size(818, 38);
+            txtScanner.TabIndex = 1;
+            txtScanner.KeyDown += txtScanner_KeyDown;
+            // 
+            // lblStrategy
+            // 
+            lblStrategy.AutoSize = true;
+            lblStrategy.Location = new Point(556, 231);
+            lblStrategy.Name = "lblStrategy";
+            lblStrategy.Size = new Size(68, 31);
+            lblStrategy.TabIndex = 8;
+            lblStrategy.Text = "策略:";
+            // 
+            // cmbStrategy
+            // 
+            cmbStrategy.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbStrategy.FormattingEnabled = true;
+            cmbStrategy.Location = new Point(664, 228);
+            cmbStrategy.Name = "cmbStrategy";
+            cmbStrategy.Size = new Size(339, 38);
+            cmbStrategy.TabIndex = 9;
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(87, 230);
+            label1.Location = new Point(39, 153);
             label1.Name = "label1";
-            label1.Size = new Size(117, 28);
-            label1.TabIndex = 0;
-            label1.Text = "商品编码：";
+            label1.Size = new Size(116, 31);
+            label1.TabIndex = 2;
+            label1.Text = "物料编码:";
+            // 
+            // txtGoodsCode
+            // 
+            txtGoodsCode.Location = new Point(185, 150);
+            txtGoodsCode.Name = "txtGoodsCode";
+            txtGoodsCode.Size = new Size(339, 38);
+            txtGoodsCode.TabIndex = 3;
             // 
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(87, 315);
+            label2.Location = new Point(556, 153);
             label2.Name = "label2";
-            label2.Size = new Size(117, 28);
-            label2.TabIndex = 1;
-            label2.Text = "出库数量：";
-            // 
-            // txtGoodsCode
-            // 
-            txtGoodsCode.Location = new Point(285, 227);
-            txtGoodsCode.Name = "txtGoodsCode";
-            txtGoodsCode.Size = new Size(175, 34);
-            txtGoodsCode.TabIndex = 2;
+            label2.Size = new Size(68, 31);
+            label2.TabIndex = 4;
+            label2.Text = "数量:";
             // 
             // txtQty
             // 
-            txtQty.Location = new Point(285, 312);
+            txtQty.Location = new Point(664, 150);
             txtQty.Name = "txtQty";
-            txtQty.Size = new Size(175, 34);
-            txtQty.TabIndex = 3;
+            txtQty.Size = new Size(339, 38);
+            txtQty.TabIndex = 5;
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(87, 404);
+            label3.Location = new Point(39, 231);
             label3.Name = "label3";
-            label3.Size = new Size(117, 28);
-            label3.TabIndex = 4;
-            label3.Text = "所在库位：";
-            // 
-            // btnConfirm
-            // 
-            btnConfirm.Location = new Point(287, 639);
-            btnConfirm.Name = "btnConfirm";
-            btnConfirm.Size = new Size(152, 40);
-            btnConfirm.TabIndex = 5;
-            btnConfirm.Text = "✅ 确认出库";
-            btnConfirm.UseVisualStyleBackColor = true;
-            btnConfirm.Click += btnConfirm_Click;
+            label3.Size = new Size(116, 31);
+            label3.TabIndex = 6;
+            label3.Text = "出库库位:";
             // 
             // txtLocCode
             // 
-            txtLocCode.Location = new Point(285, 401);
+            txtLocCode.Location = new Point(185, 228);
             txtLocCode.Name = "txtLocCode";
-            txtLocCode.Size = new Size(175, 34);
-            txtLocCode.TabIndex = 6;
+            txtLocCode.Size = new Size(339, 38);
+            txtLocCode.TabIndex = 7;
             // 
-            // label4
+            // btnConfirm
             // 
-            label4.AutoSize = true;
-            label4.Location = new Point(287, 46);
-            label4.Name = "label4";
-            label4.Size = new Size(194, 28);
-            label4.TabIndex = 7;
-            label4.Text = "🔫 扫码枪接收区：";
+            btnConfirm.Location = new Point(1067, 68);
+            btnConfirm.Name = "btnConfirm";
+            btnConfirm.Size = new Size(156, 194);
+            btnConfirm.TabIndex = 10;
+            btnConfirm.Text = "确认出库";
+            btnConfirm.UseVisualStyleBackColor = true;
+            btnConfirm.Click += btnConfirm_Click;
             // 
-            // txtScanner
+            // gbBOM
             // 
-            txtScanner.BackColor = SystemColors.Info;
-            txtScanner.Location = new Point(87, 130);
-            txtScanner.Name = "txtScanner";
-            txtScanner.Size = new Size(746, 34);
-            txtScanner.TabIndex = 8;
-            txtScanner.KeyDown += txtScanner_KeyDown;
+            gbBOM.Controls.Add(btnExecuteBOM);
+            gbBOM.Controls.Add(dgvBOM);
+            gbBOM.Controls.Add(btnAnalyze);
+            gbBOM.Controls.Add(txtProduceQty);
+            gbBOM.Controls.Add(lblProduceQty);
+            gbBOM.Controls.Add(txtProductCode);
+            gbBOM.Controls.Add(lblProduct);
+            gbBOM.Font = new Font("微软雅黑", 10F);
+            gbBOM.Location = new Point(40, 417);
+            gbBOM.Name = "gbBOM";
+            gbBOM.Size = new Size(1255, 535);
+            gbBOM.TabIndex = 1;
+            gbBOM.TabStop = false;
+            gbBOM.Text = "按 BOM 展开出库 (产线工单模式)";
             // 
-            // label5
+            // btnExecuteBOM
             // 
-            label5.AutoSize = true;
-            label5.Location = new Point(87, 499);
-            label5.Name = "label5";
-            label5.Size = new Size(117, 28);
-            label5.TabIndex = 9;
-            label5.Text = "所在库位：";
+            btnExecuteBOM.Font = new Font("微软雅黑", 10.5F, FontStyle.Bold);
+            btnExecuteBOM.ForeColor = Color.DarkGreen;
+            btnExecuteBOM.Location = new Point(993, 466);
+            btnExecuteBOM.Name = "btnExecuteBOM";
+            btnExecuteBOM.Size = new Size(230, 45);
+            btnExecuteBOM.TabIndex = 6;
+            btnExecuteBOM.Text = "🚀 确认全套出库并呼叫AGV";
+            btnExecuteBOM.UseVisualStyleBackColor = true;
+            btnExecuteBOM.Click += btnExecuteBOM_Click;
             // 
-            // cmbStrategy
+            // dgvBOM
             // 
-            cmbStrategy.FormattingEnabled = true;
-            cmbStrategy.Location = new Point(287, 496);
-            cmbStrategy.Name = "cmbStrategy";
-            cmbStrategy.Size = new Size(546, 36);
-            cmbStrategy.TabIndex = 10;
+            dgvBOM.AllowUserToAddRows = false;
+            dgvBOM.AllowUserToDeleteRows = false;
+            dgvBOM.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvBOM.Location = new Point(39, 133);
+            dgvBOM.Name = "dgvBOM";
+            dgvBOM.ReadOnly = true;
+            dgvBOM.RowHeadersWidth = 51;
+            dgvBOM.RowTemplate.Height = 35;
+            dgvBOM.Size = new Size(1184, 327);
+            dgvBOM.TabIndex = 5;
+            // 
+            // btnAnalyze
+            // 
+            btnAnalyze.Location = new Point(39, 467);
+            btnAnalyze.Name = "btnAnalyze";
+            btnAnalyze.Size = new Size(248, 45);
+            btnAnalyze.TabIndex = 4;
+            btnAnalyze.Text = "📊 分析BOM齐套性";
+            btnAnalyze.UseVisualStyleBackColor = true;
+            btnAnalyze.Click += btnAnalyze_Click;
+            // 
+            // txtProduceQty
+            // 
+            txtProduceQty.Location = new Point(877, 78);
+            txtProduceQty.Name = "txtProduceQty";
+            txtProduceQty.Size = new Size(346, 38);
+            txtProduceQty.TabIndex = 3;
+            // 
+            // lblProduceQty
+            // 
+            lblProduceQty.AutoSize = true;
+            lblProduceQty.Location = new Point(675, 81);
+            lblProduceQty.Name = "lblProduceQty";
+            lblProduceQty.Size = new Size(164, 31);
+            lblProduceQty.TabIndex = 2;
+            lblProduceQty.Text = "计划生产数量:";
+            // 
+            // txtProductCode
+            // 
+            txtProductCode.Location = new Point(220, 78);
+            txtProductCode.Name = "txtProductCode";
+            txtProductCode.Size = new Size(426, 38);
+            txtProductCode.TabIndex = 1;
+            // 
+            // lblProduct
+            // 
+            lblProduct.AutoSize = true;
+            lblProduct.Location = new Point(39, 81);
+            lblProduct.Name = "lblProduct";
+            lblProduct.Size = new Size(164, 31);
+            lblProduct.TabIndex = 0;
+            lblProduct.Text = "成品生产编码:";
             // 
             // OutStockForm
             // 
-            AutoScaleDimensions = new SizeF(13F, 28F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(881, 760);
-            Controls.Add(cmbStrategy);
-            Controls.Add(label5);
-            Controls.Add(txtScanner);
-            Controls.Add(label4);
-            Controls.Add(txtLocCode);
-            Controls.Add(btnConfirm);
-            Controls.Add(label3);
-            Controls.Add(txtQty);
-            Controls.Add(txtGoodsCode);
-            Controls.Add(label2);
-            Controls.Add(label1);
+            ClientSize = new Size(1333, 975);
+            Controls.Add(gbBOM);
+            Controls.Add(gbStandard);
             Name = "OutStockForm";
-            Text = "OutStockForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "智能出库与生产领料单";
             Load += OutStockForm_Load;
+            gbStandard.ResumeLayout(false);
+            gbStandard.PerformLayout();
+            gbBOM.ResumeLayout(false);
+            gbBOM.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvBOM).EndInit();
             ResumeLayout(false);
-            PerformLayout();
+
         }
 
-        #endregion
-
-        private Label label1;
-        private Label label2;
-        private TextBox txtGoodsCode;
-        private TextBox txtQty;
-        private Label label3;
-        private Button btnConfirm;
-        private TextBox txtLocCode;
-        private Label label4;
-        private TextBox txtScanner;
-        private Label label5;
-        private ComboBox cmbStrategy;
+        private System.Windows.Forms.GroupBox gbStandard;
+        private System.Windows.Forms.Label labelScanner;
+        private System.Windows.Forms.TextBox txtScanner;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox txtGoodsCode;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox txtQty;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.TextBox txtLocCode;
+        private System.Windows.Forms.Label lblStrategy;
+        private System.Windows.Forms.ComboBox cmbStrategy;
+        private System.Windows.Forms.Button btnConfirm;
+        private System.Windows.Forms.GroupBox gbBOM;
+        private System.Windows.Forms.Label lblProduct;
+        private System.Windows.Forms.TextBox txtProductCode;
+        private System.Windows.Forms.Label lblProduceQty;
+        private System.Windows.Forms.TextBox txtProduceQty;
+        private System.Windows.Forms.Button btnAnalyze;
+        private System.Windows.Forms.DataGridView dgvBOM;
+        private System.Windows.Forms.Button btnExecuteBOM;
     }
 }

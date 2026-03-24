@@ -24,9 +24,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Update="UI\OutStockForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Update="UI\OutStockForm.cs" />
   </ItemGroup>
 
   <ItemGroup>
