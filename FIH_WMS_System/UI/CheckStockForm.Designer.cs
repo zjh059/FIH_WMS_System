@@ -71,6 +71,7 @@
             dgvCountList.AllowUserToAddRows = false;
             dgvCountList.AllowUserToDeleteRows = false;
             dgvCountList.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dgvCountList.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvCountList.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvCountList.Location = new Point(20, 70);
             dgvCountList.Name = "dgvCountList";

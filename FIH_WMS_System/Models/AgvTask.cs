@@ -24,7 +24,7 @@ namespace FIH_WMS_System.Models
         /// </summary>
         public int Status { get; set; }
 
-        public string GoodsCode { get; set; } = string.Empty;//要搬运的商品
+        public string GoodsCode { get; set; } = string.Empty;//要搬运的物料
         public int Qty { get; set; }                        //要搬运的数量
 
         public string FromLocation { get; set; } = string.Empty;//起始地点 (如 A-01-01)
@@ -33,7 +33,7 @@ namespace FIH_WMS_System.Models
         public DateTime CreateTime { get; set; }            //指令下发时间
         public DateTime? FinishTime { get; set; }           //指令完成时间
 
-        // 导航属性：方便在界面上显示商品的中文名
+        // 导航属性：方便在界面上显示物料的中文名
         public Goods? Goods { get; set; }
     }
 }

@@ -39,7 +39,7 @@ namespace FIH_WMS_System.Services
                 {
                     try
                     {
-                        // 1. 检查同一个库位、同一个商品、同一个批次是不是已经有记录了
+                        // 1. 检查同一个库位、同一个物料、同一个批次是不是已经有记录了
                         var stockId = db.ExecuteScalar<int?>(
                             "SELECT Id FROM Stock WHERE GoodsCode = @gCode AND LocationCode = @lCode AND BatchNo = @batch",
                             new { gCode = goodsCode, lCode = locCode, batch = batchNo }, transaction);
@@ -104,7 +104,7 @@ namespace FIH_WMS_System.Services
                         {
                             try
                             {
-                                // 1. 查出这个库位上，这个商品的所有批次库存，并且【按入库时间从早到晚排序】（这就是先进先出的核心！）
+                                // 1. 查出这个库位上，这个物料的所有批次库存，并且【按入库时间从早到晚排序】（这就是先进先出的核心！）
                                 var stocks = db.Query<Stock>(
                                     "SELECT Id, Qty, BatchNo FROM Stock WHERE GoodsCode = @gCode AND LocationCode = @lCode ORDER BY InStockTime ASC",
                                     new { gCode = goodsCode, lCode = locCode }, transaction).ToList();
@@ -310,31 +310,31 @@ namespace FIH_WMS_System.Services
         public string GetRecommendLocation(string goodsCode, InboundStrategy strategy = InboundStrategy.SameMaterialMerge)
         {
 
-/*            using (var db = new SqlConnection(connStr))
-            {
-                // (1)按未满库位入库（减少碎片）
-                // 先去库存表里找找，有没有哪个库位已经放了这个商品了？如果有，我们就推荐跟它放在一起。
-                string existLoc = db.ExecuteScalar<string>(
-                    "SELECT TOP 1 LocationCode FROM Stock WHERE GoodsCode = @gCode",
-                    new { gCode = goodsCode });
+            /*            using (var db = new SqlConnection(connStr))
+                        {
+                            // (1)按未满库位入库（减少碎片）
+                            // 先去库存表里找找，有没有哪个库位已经放了这个物料了？如果有，我们就推荐跟它放在一起。
+                            string existLoc = db.ExecuteScalar<string>(
+                                "SELECT TOP 1 LocationCode FROM Stock WHERE GoodsCode = @gCode",
+                                new { gCode = goodsCode });
 
-                if (!string.IsNullOrEmpty(existLoc))
-                {
-                    return existLoc; // 找到了！直接推荐合并存放
-                }
+                            if (!string.IsNullOrEmpty(existLoc))
+                            {
+                                return existLoc; // 找到了！直接推荐合并存放
+                            }
 
-                // (2)按空库位入库（不混合存储）
-                // 如果这是一个全新的商品，就去 Location 表里找一个完全没人用的空库位 (IsUsed = 0)
-                string emptyLoc = db.ExecuteScalar<string>( "SELECT TOP 1 Code FROM Location WHERE IsUsed = 0");
+                            // (2)按空库位入库（不混合存储）
+                            // 如果这是一个全新的物料，就去 Location 表里找一个完全没人用的空库位 (IsUsed = 0)
+                            string emptyLoc = db.ExecuteScalar<string>( "SELECT TOP 1 Code FROM Location WHERE IsUsed = 0");
 
-                if (!string.IsNullOrEmpty(emptyLoc))
-                {
-                    return emptyLoc; // 找到了一个空闲的新家！
-                }
+                            if (!string.IsNullOrEmpty(emptyLoc))
+                            {
+                                return emptyLoc; // 找到了一个空闲的新家！
+                            }
 
-                // (3)如果都没找到，说明整个仓库连一个空位都没有了，爆仓了！
-                return string.Empty;
-            }*/
+                            // (3)如果都没找到，说明整个仓库连一个空位都没有了，爆仓了！
+                            return string.Empty;
+                        }*/
 
             // 如果用户选择了“人工指定”，系统就不用费劲推荐了
             if (strategy == InboundStrategy.Manual)
@@ -599,20 +599,20 @@ namespace FIH_WMS_System.Services
 
 
         // ==========================================
-        // 10. 获取图表统计数据 (各商品总库存)
+        // 10. 获取图表统计数据 (各物料总库存)
         // ==========================================
         public Dictionary<string, int> GetStockChartData()
         {
             using (var db = new SqlConnection(connStr))
             {
-                // 使用 SQL 的 GROUP BY 把同一个商品在不同库位的数量加起来 (SUM)
+                // 使用 SQL 的 GROUP BY 把同一个物料在不同库位的数量加起来 (SUM)
                 string sql = @"
                     SELECT g.Name, SUM(s.Qty) as TotalQty 
                     FROM Stock s 
                     INNER JOIN Goods g ON s.GoodsCode = g.Code 
                     GROUP BY g.Name";
 
-                // 执行查询，并转换成 字典(Dictionary) 格式，方便前端画图 (Key:商品名, Value:总数量)
+                // 执行查询，并转换成 字典(Dictionary) 格式，方便前端画图 (Key:物料名, Value:总数量)
                 var result = db.Query(sql)
                                .ToDictionary(row => (string)row.Name, row => (int)row.TotalQty);
                 return result;
@@ -659,7 +659,7 @@ namespace FIH_WMS_System.Services
         {
             using (var db = new SqlConnection(connStr))
             {
-                // 用 LEFT JOIN 把库位表、库存表、商品表连起来
+                // 用 LEFT JOIN 把库位表、库存表、物料表连起来
                 // 这样既能查到空闲的货架，也能查到放了什么货
 
                 // 使用 GROUP BY 和 SUM，确保每个库位只返回唯一的一行汇总数据
@@ -820,7 +820,7 @@ namespace FIH_WMS_System.Services
             // countType 规则约定: 0=按单一库位盘点, 1=按指定物料盘点, 2=全仓盲盘 (对应文档的多方式盘点要求)
             using (var db = new SqlConnection(connStr))
             {
-                // 基础 SQL：关联查询库存和商品名称
+                // 基础 SQL：关联查询库存和物料名称
                 string sql = @"
                     SELECT s.Id as StockId, s.GoodsCode, g.Name as GoodsName, 
                            s.LocationCode, s.BatchNo, s.Qty as SystemQty, 
@@ -839,7 +839,7 @@ namespace FIH_WMS_System.Services
                     sql += " AND s.GoodsCode = @kw";
                 }
 
-                // 按照库位和商品排序，方便工人按顺序去数
+                // 按照库位和物料排序，方便工人按顺序去数
                 sql += " ORDER BY s.LocationCode, s.GoodsCode";
 
                 return db.Query<StockCountItem>(sql, new { kw = keyword }).ToList();
@@ -922,7 +922,7 @@ namespace FIH_WMS_System.Services
             {
                 var adviceList = new List<ConsolidationAdvice>();
 
-                // 1. 找出所有“身首异处”的物料 (同一种商品，被分散存放在了 > 1 个库位里)
+                // 1. 找出所有“身首异处”的物料 (同一种物料，被分散存放在了 > 1 个库位里)
                 string sqlFindFragmented = @"
                     SELECT GoodsCode 
                     FROM Stock 
@@ -1075,7 +1075,7 @@ namespace FIH_WMS_System.Services
             using (var db = new SqlConnection(connStr))
             {
                 // 按最新的倒序排列，方便刚添加完就能看到
-                return db.Query("SELECT Code as 商品编码, Name as 商品名称, Spec as 规格, Category as 分类 FROM Goods ORDER BY Id DESC").ToList();
+                return db.Query("SELECT Code as 物料编码, Name as 物料名称, Spec as 规格, Category as 分类 FROM Goods ORDER BY Id DESC").ToList();
             }
         }
 

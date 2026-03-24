@@ -47,7 +47,7 @@
             label1.Name = "label1";
             label1.Size = new Size(117, 28);
             label1.TabIndex = 0;
-            label1.Text = "商品编码：";
+            label1.Text = "物料编码：";
             // 
             // label2
             // 

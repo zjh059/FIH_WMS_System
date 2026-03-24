@@ -83,7 +83,7 @@
             uiButton1.Name = "uiButton1";
             uiButton1.Size = new Size(219, 61);
             uiButton1.TabIndex = 7;
-            uiButton1.Text = "📥 商品入库";
+            uiButton1.Text = "📥 物料入库";
             uiButton1.TipsFont = new Font("宋体", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
             uiButton1.Click += uiButton1_Click;
             // 
@@ -95,7 +95,7 @@
             uiButton2.Name = "uiButton2";
             uiButton2.Size = new Size(219, 61);
             uiButton2.TabIndex = 8;
-            uiButton2.Text = "📤 商品出库";
+            uiButton2.Text = "📤 物料出库";
             uiButton2.TipsFont = new Font("宋体", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
             uiButton2.Click += uiButton2_Click;
             // 

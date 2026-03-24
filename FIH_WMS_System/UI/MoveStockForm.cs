@@ -44,7 +44,7 @@ namespace FIH_WMS_System.UI
 
                 if (string.IsNullOrEmpty(InputGoodsCode) || string.IsNullOrEmpty(InputFromLoc) || string.IsNullOrEmpty(InputToLoc))
                 {
-                    MessageBox.Show("警告：商品编码和新旧库位都必须填写！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("警告：物料编码和新旧库位都必须填写！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
                 if (InputFromLoc == InputToLoc)

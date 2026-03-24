@@ -30,6 +30,7 @@ namespace FIH_WMS_System.UI
             cmbCountType.Items.Add("0 - 按指定库位盘点");
             cmbCountType.Items.Add("1 - 按指定物料盘点");
             cmbCountType.SelectedIndex = 0; // 默认选中第一个
+
         }
 
         // 2. 点击“生成盘点清单”按钮

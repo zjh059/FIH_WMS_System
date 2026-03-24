@@ -67,7 +67,7 @@ namespace FIH_WMS_System.UI
                 // 校验必填项
                 if (string.IsNullOrEmpty(InputGoodsCode))
                 {
-                    MessageBox.Show("商品编码不能为空！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("物料编码不能为空！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -87,7 +87,7 @@ namespace FIH_WMS_System.UI
                     {
                         // 帮用户把找到的库位填进口袋里
                         InputLocCode = autoLoc;
-                        MessageBox.Show($"触发智能分配！\n系统已自动将商品分配至库位：【{autoLoc}】", "智能引擎", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show($"触发智能分配！\n系统已自动将物料分配至库位：【{autoLoc}】", "智能引擎", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
 

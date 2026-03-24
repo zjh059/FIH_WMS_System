@@ -99,7 +99,7 @@ namespace FIH_WMS_System
                 if (generatedReelId == "ERROR_GOODS")
                 {
                     Utils.VoiceHelper.Speak("警告，物料编码不存在");
-                    MessageBox.Show($"❌ 入库拦截：系统基础物料库中不存在编码为【{form.InputGoodsCode}】的商品！\n请先在基础数据中登记该物料，再进行入库。", "非法操作", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"❌ 入库拦截：系统基础物料库中不存在编码为【{form.InputGoodsCode}】的物料！\n请先在基础数据中登记该物料，再进行入库。", "非法操作", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 else if (generatedReelId == "ERROR_LOCATION")
                 {
@@ -111,7 +111,7 @@ namespace FIH_WMS_System
 
                 else if (!string.IsNullOrEmpty(generatedReelId))
                 {
-                    Utils.VoiceHelper.Speak("商品入库成功，已为您生成防呆追溯标签。");
+                    Utils.VoiceHelper.Speak("物料入库成功，已为您生成追溯标签。");
                     MessageBox.Show("🎉 入库成功！数据已更新，正在生成标签...", "系统提示");
 
                     // ==========================================
@@ -167,7 +167,7 @@ namespace FIH_WMS_System
                 }
                 else
                 {
-                    MessageBox.Show("❌ 入库失败：可能商品编码或库位不存在！", "系统提示");
+                    MessageBox.Show("❌ 入库失败：可能物料编码或库位不存在！", "系统提示");
                 }
             }
         }
@@ -256,13 +256,13 @@ namespace FIH_WMS_System
             var rawStock = wms.GetStockList();
 
             // 2. ✨ LINQ showTime
-            // 因为库存对象里包含了商品和库位，直接展示会很难看。
+            // 因为库存对象里包含了物料和库位，直接展示会很难看。
             // 我们用 Select 重新“包装”一下，变成中文表头
             var displayList = rawStock.Select(s => new
             {
                 库存编号 = s.Id,
-                商品名称 = s.Goods?.Name,
-                商品编码 = s.Goods?.Code,
+                物料名称 = s.Goods?.Name,
+                物料编码 = s.Goods?.Code,
                 所在库位 = s.Location?.Code,
                 库存数量 = s.Qty,
                 批次号 = s.BatchNo,                           // 👈 【新增展示】
@@ -288,7 +288,7 @@ namespace FIH_WMS_System
                 单据号 = r.OrderNo,               // 👈 【新增展示】查账必备
                 // ⚠️ 三元表达式：如果是 InStock 就显示"入库"，否则显示"出库"
                 操作类型 = r.Type == FIH_WMS_System.Models.RecordType.InStock ? "▲ 入库 (+)" : "▼ 出库 (-)",
-                商品名称 = r.Goods?.Name,
+                物料名称 = r.Goods?.Name,
                 所在库位 = r.Location?.Code,      // 👈 【新增展示】明确货物在哪进出的
                 变动数量 = r.Qty,
                 批次号 = r.BatchNo,               // 👈 【新增展示】FIFO的核心依据
@@ -305,7 +305,7 @@ namespace FIH_WMS_System
             //“记录编号”那一列太宽了浪费，也可以加一句
             //dataGridView1.Columns["记录编号"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
 
-            dataGridView1.Columns["商品名称"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            dataGridView1.Columns["物料名称"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
             dataGridView1.Columns["所在库位"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
             dataGridView1.Columns["变动数量"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
         }
@@ -337,7 +337,7 @@ namespace FIH_WMS_System
                     }
                     else
                     {
-                        MessageBox.Show("❌ 移库失败：可能源库位不存在该商品，或者库存数量不足！", "系统警告");
+                        MessageBox.Show("❌ 移库失败：可能源库位不存在该物料，或者库存数量不足！", "系统警告");
                     }
                 }
             }
@@ -371,7 +371,7 @@ namespace FIH_WMS_System
                 任务单号 = t.TaskNo,
                 任务类型 = t.TaskType == 1 ? "📤 出库搬运" : (t.TaskType == 0 ? "📥 入库搬运" : "🔄 移库搬运"),
                 当前状态 = t.Status == 0 ? "⏳ 待分配" : (t.Status == 3 ? "✅ 已完成" : "🚀 运送中"),
-                商品名称 = t.Goods?.Name,
+                物料名称 = t.Goods?.Name,
                 搬运数量 = t.Qty,
                 起点 = t.FromLocation,
                 终点 = t.ToLocation,

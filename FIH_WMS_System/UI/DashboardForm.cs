@@ -13,7 +13,7 @@ using Sunny.UI;
 namespace FIH_WMS_System.UI
 {
     /// <summary>
-    /// “各商品库存量统计”的柱状图
+    /// “各物料库存量统计”的柱状图
     /// DashboardForm (看板窗体)
     /// </summary>
     public partial class DashboardForm : Form
@@ -42,9 +42,9 @@ private void DashboardForm_Load(object sender, EventArgs e)
             // 【核心优化 2】：增加四个方向的内边距，绝对防止 X/Y 轴文字被控件边缘切掉！
             option.Grid.Left = 80;   // 给左侧 Y 轴数字留空间
             option.Grid.Right = 30;  // 右侧防贴边
-            option.Grid.Bottom = 80; // 给底部 X 轴的商品长名字留足空间
+            option.Grid.Bottom = 80; // 给底部 X 轴的物料长名字留足空间
 
-            option.XAxis.Name = "商品名称";
+            option.XAxis.Name = "物料名称";
             option.YAxis.Name = "数量";
 
             UIBarSeries series = new UIBarSeries();
