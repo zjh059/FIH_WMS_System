@@ -52,7 +52,7 @@
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(46, 131);
+            label2.Location = new Point(429, 46);
             label2.Name = "label2";
             label2.Size = new Size(117, 28);
             label2.TabIndex = 1;
@@ -60,22 +60,22 @@
             // 
             // txtGoodsCode
             // 
-            txtGoodsCode.Location = new Point(224, 43);
+            txtGoodsCode.Location = new Point(169, 43);
             txtGoodsCode.Name = "txtGoodsCode";
-            txtGoodsCode.Size = new Size(195, 34);
+            txtGoodsCode.Size = new Size(220, 34);
             txtGoodsCode.TabIndex = 2;
             // 
             // txtQty
             // 
-            txtQty.Location = new Point(224, 128);
+            txtQty.Location = new Point(552, 43);
             txtQty.Name = "txtQty";
-            txtQty.Size = new Size(195, 34);
+            txtQty.Size = new Size(220, 34);
             txtQty.TabIndex = 3;
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(46, 220);
+            label3.Location = new Point(46, 143);
             label3.Name = "label3";
             label3.Size = new Size(117, 28);
             label3.TabIndex = 4;
@@ -83,9 +83,9 @@
             // 
             // btnConfirm
             // 
-            btnConfirm.Location = new Point(224, 401);
+            btnConfirm.Location = new Point(552, 376);
             btnConfirm.Name = "btnConfirm";
-            btnConfirm.Size = new Size(175, 40);
+            btnConfirm.Size = new Size(220, 40);
             btnConfirm.TabIndex = 5;
             btnConfirm.Text = "✅ 确认入库";
             btnConfirm.UseVisualStyleBackColor = true;
@@ -93,15 +93,15 @@
             // 
             // txtLocCode
             // 
-            txtLocCode.Location = new Point(224, 217);
+            txtLocCode.Location = new Point(169, 140);
             txtLocCode.Name = "txtLocCode";
-            txtLocCode.Size = new Size(195, 34);
+            txtLocCode.Size = new Size(220, 34);
             txtLocCode.TabIndex = 6;
             // 
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(46, 305);
+            label4.Location = new Point(46, 254);
             label4.Name = "label4";
             label4.Size = new Size(117, 28);
             label4.TabIndex = 7;
@@ -111,16 +111,16 @@
             // 
             cmbStrategy.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbStrategy.FormattingEnabled = true;
-            cmbStrategy.Location = new Point(224, 305);
+            cmbStrategy.Location = new Point(169, 251);
             cmbStrategy.Name = "cmbStrategy";
-            cmbStrategy.Size = new Size(423, 36);
+            cmbStrategy.Size = new Size(603, 36);
             cmbStrategy.TabIndex = 8;
             // 
             // btnRecommend
             // 
-            btnRecommend.Location = new Point(496, 40);
+            btnRecommend.Location = new Point(46, 376);
             btnRecommend.Name = "btnRecommend";
-            btnRecommend.Size = new Size(151, 40);
+            btnRecommend.Size = new Size(144, 40);
             btnRecommend.TabIndex = 9;
             btnRecommend.Text = "智能推荐";
             btnRecommend.UseVisualStyleBackColor = true;
@@ -130,7 +130,7 @@
             // 
             AutoScaleDimensions = new SizeF(13F, 28F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(686, 474);
+            ClientSize = new Size(815, 474);
             Controls.Add(btnRecommend);
             Controls.Add(cmbStrategy);
             Controls.Add(label4);
