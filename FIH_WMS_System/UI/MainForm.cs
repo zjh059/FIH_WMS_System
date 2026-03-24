@@ -15,6 +15,12 @@ namespace FIH_WMS_System
                         wms.AddGoods("G002", "成品B", "100个/箱", 300m);
                         wms.InStock("G001", 10, "A-01-01");
                         wms.InStock("G002", 5, "B-01-01");*/
+
+            //  1. 禁用字体自动缩放，防止在高分屏下控件乱缩
+            this.AutoScaleMode = AutoScaleMode.None;
+
+            //  2. 强行撑开标题栏高度（默认通常是35，设为45左右，右上角的按钮会自动变大！）
+            //this.TitleHeight = 65;
         }
 
         // 窗口加载时触发的事件
@@ -22,6 +28,22 @@ namespace FIH_WMS_System
         {
             // 1. 左上角的标题栏显示当前登录人的名字和身份
             this.Text = $"FIH 智能仓储管理系统 - 当前登录：【{Program.CurrentUsername}】 ({Program.CurrentRole})";
+
+            //把表格的锚点钉死在上下左右四个边
+            // 这样只要窗口一拉伸，表格就会填满空白区域
+            dataGridView1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+
+            label1.Anchor = AnchorStyles.Top | AnchorStyles.Top;
+            btnLogout.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
+            //让这三个按钮钉在窗口的“底部”和“右侧”
+            // 这样窗口放大时，它们会乖乖跟着往下跑，绝对不会被表格压到！
+            btnAgvMonitor.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnSimulateAgv.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnExportExcel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+
+
+
 
             // 2. 权限校验：如果是普通操作员，锁死危险的改账操作
             if (Program.CurrentRole == "操作员")
@@ -274,7 +296,9 @@ namespace FIH_WMS_System
             dataGridView1.DataSource = displayList;//绑定新数据
 
             // 让表格根据内容自动调整列宽
-            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            //dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            //强制让所有列按比例撑满整个表格宽度！
+            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         }
         private void uiButton4_Click(object sender, EventArgs e)
         {

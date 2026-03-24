@@ -92,7 +92,9 @@ namespace FIH_WMS_System.UI
             dgvCountList.Columns["SystemQty"].HeaderText = "系统账面数";
             dgvCountList.Columns["Difference"].HeaderText = "差异数量";
 
-            dgvCountList.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            //dgvCountList.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            //强制让所有列按比例撑满整个表格宽度！
+            dgvCountList.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         }
 
         // 3. 提交盘点结果并一键平账
