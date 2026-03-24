@@ -12,32 +12,46 @@
 
         private void InitializeComponent()
         {
+            this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.uiBarChart1 = new Sunny.UI.UIBarChart();
-            this.uiPieChart1 = new Sunny.UI.UIPieChart(); // 👈 增加饼图控件
+            this.uiPieChart1 = new Sunny.UI.UIPieChart();
+            this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
-
             // 
-            // uiBarChart1 (柱状图，放在左边)
+            // tableLayoutPanel1 (核心：自适应网格)
             // 
-            this.uiBarChart1.Dock = System.Windows.Forms.DockStyle.Left; // 👈 关键：停靠在左边，不再是 Fill！
+            this.tableLayoutPanel1.ColumnCount = 2;
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F)); // 左边永远50%
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F)); // 右边永远50%
+            this.tableLayoutPanel1.Controls.Add(this.uiBarChart1, 0, 0);
+            this.tableLayoutPanel1.Controls.Add(this.uiPieChart1, 1, 0);
+            this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
+            this.tableLayoutPanel1.Name = "tableLayoutPanel1";
+            this.tableLayoutPanel1.RowCount = 1;
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(1268, 840);
+            this.tableLayoutPanel1.TabIndex = 0;
+            // 
+            // uiBarChart1
+            // 
+            this.uiBarChart1.Dock = System.Windows.Forms.DockStyle.Fill; // 填满左边的格子
             this.uiBarChart1.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.uiBarChart1.Location = new System.Drawing.Point(0, 0);
+            this.uiBarChart1.Location = new System.Drawing.Point(10, 10); // 加一点外边距，防止贴边
             this.uiBarChart1.Name = "uiBarChart1";
-            this.uiBarChart1.Size = new System.Drawing.Size(600, 840); // 👈 宽度设为 600，刚好占左边一半
+            this.uiBarChart1.Size = new System.Drawing.Size(614, 820);
             this.uiBarChart1.TabIndex = 0;
             this.uiBarChart1.Text = "uiBarChart1";
-
             // 
-            // uiPieChart1 (饼状图，占满剩下的右边)
+            // uiPieChart1
             // 
-            this.uiPieChart1.Dock = System.Windows.Forms.DockStyle.Fill; // 👈 关键：左边被占了600，剩下的全归饼图！
+            this.uiPieChart1.Dock = System.Windows.Forms.DockStyle.Fill; // 填满右边的格子
             this.uiPieChart1.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.uiPieChart1.Location = new System.Drawing.Point(600, 0);
+            this.uiPieChart1.Location = new System.Drawing.Point(644, 10);
             this.uiPieChart1.Name = "uiPieChart1";
-            this.uiPieChart1.Size = new System.Drawing.Size(668, 840);
+            this.uiPieChart1.Size = new System.Drawing.Size(614, 820);
             this.uiPieChart1.TabIndex = 1;
             this.uiPieChart1.Text = "uiPieChart1";
-
             // 
             // DashboardForm
             // 
@@ -45,16 +59,17 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(1268, 840);
-            this.Controls.Add(this.uiPieChart1); // 👈 把饼图加进窗口
-            this.Controls.Add(this.uiBarChart1);
+            this.Controls.Add(this.tableLayoutPanel1);
             this.Name = "DashboardForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "数据分析大屏";
             this.Load += new System.EventHandler(this.DashboardForm_Load);
+            this.tableLayoutPanel1.ResumeLayout(false);
             this.ResumeLayout(false);
         }
 
+        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private Sunny.UI.UIBarChart uiBarChart1;
-        private Sunny.UI.UIPieChart uiPieChart1; // 👈 声明饼图变量
+        private Sunny.UI.UIPieChart uiPieChart1;
     }
 }

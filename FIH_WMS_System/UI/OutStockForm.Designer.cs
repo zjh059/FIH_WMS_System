@@ -70,6 +70,7 @@
             // 
             // txtScanner
             // 
+            txtScanner.BackColor = SystemColors.Info;
             txtScanner.Location = new Point(185, 68);
             txtScanner.Name = "txtScanner";
             txtScanner.Size = new Size(818, 38);

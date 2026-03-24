@@ -402,10 +402,18 @@ namespace FIH_WMS_System
         }
 
         //一键导出--表格处理
-        private void btnExportExcel_Click(object sender, EventArgs e) 
+        private void btnExportExcel_Click(object sender, EventArgs e)
         {
             Utils.ExcelHelper.ExportToExcel(dataGridView1, "FIH智能仓储报表");
         }
+
+        // AGV 监控台
+        private void btnAgvMonitor_Click(object sender, EventArgs e)
+        {
+            UI.AgvMonitorForm form = new UI.AgvMonitorForm();
+            form.ShowDialog();
+        }
+
 
 
     }

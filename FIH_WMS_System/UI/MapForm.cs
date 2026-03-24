@@ -1,73 +1,111 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using FIH_WMS_System.Models;
 
 namespace FIH_WMS_System.UI
 {
     /// <summary>
-    /// 2D 库位地图数据源 (可视化屏)
-    ///服务层增加“扫描仓库”的大脑
-    ///我们需要一次性把所有货架、货架上有没有东西、有什么东西全部查出来。
+    /// 2D 库位地图数据源 (可视化监控屏 - 终极美化版)
     /// </summary>
     public partial class MapForm : Form
     {
         private Services.WmsService wms = new Services.WmsService();
+        private ToolTip toolTip = new ToolTip(); // 悬停提示
 
         public MapForm()
         {
             InitializeComponent();
+            InitializeToolTip(); // 仅初始化 ToolTip 即可，无需 ImageList
+        }
+
+        private void InitializeToolTip()
+        {
+            toolTip.AutoPopDelay = 5000;
+            toolTip.InitialDelay = 100;
+            toolTip.ToolTipTitle = "📦 库位详情";
+            toolTip.ToolTipIcon = ToolTipIcon.Info;
         }
 
         private void MapForm_Load(object sender, EventArgs e)
         {
-            DrawMap(); // 窗口一加载，就开始画图！
+            DrawMap();
         }
 
+        // ==========================================
+        // 核心：终极重绘，使用规整的纯文本圆点指示器
+        // ==========================================
         private void DrawMap()
         {
-            // 1. 先清空画板
+            // 开启双缓冲，防止闪烁 (这一步非常关键)
+            SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
             flowLayoutPanel1.Controls.Clear();
 
-            // 2. 拿到大脑传来的全仓数据
             var mapData = wms.GetLocationMapData();
 
-            // 3. 循环遍历每一个库位，动态生成一个个“物理货架”方块
             foreach (var loc in mapData)
             {
-                // 动态实例化一个按钮当做方块
                 Button btn = new Button();
+                btn.Size = new Size(180, 140);
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 1; // 加上一个细细的灰色边框，更有质感
+                btn.FlatAppearance.BorderColor = Color.LightGray; // 边框颜色
 
-                //btn.Size = new Size(160, 120); // 方块的长宽
-                btn.Size = new Size(180, 140); // 微调(方块的长宽)
-
-                btn.FlatStyle = FlatStyle.Flat; // 扁平化风格
+                // 使用专门适合在文本前面放圆点的字体和大小
                 btn.Font = new Font("微软雅黑", 10F, FontStyle.Bold);
+                btn.Margin = new Padding(12);
+                btn.Padding = new Padding(10); // 加上内边距，让内容更呼吸
 
-                btn.Margin = new Padding(10); // 给方块之间留点间隙
+                // 核心：不需要 TextImageRelation，直接让文字整体居中
+                btn.TextAlign = ContentAlignment.MiddleCenter;
 
                 bool isUsed = loc.IsUsed;
+                int qty = loc.Qty != null ? (int)loc.Qty : 0;
+                string goodsName = loc.GoodsName;
 
-                if (isUsed)
+                // 定义 Unicode 圆点字符
+                string dot = "● ";
+
+                if (!isUsed)
                 {
-                    // 有货：经典科技蓝 (去掉了Emoji，使用 \r\n 标准换行)
-                    btn.BackColor = Color.FromArgb(80, 160, 255);
-                    btn.ForeColor = Color.White;
-                    btn.Text = $"{loc.Code}\r\n\r\n物料: {loc.GoodsName}\r\n数量: {loc.Qty}";
+                    // --- 状态 1：空闲待命 (整块浅绿色预警) ---
+                    btn.BackColor = Color.FromArgb(220, 245, 230); // 浅绿底色
+                    btn.ForeColor = Color.FromArgb(0, 130, 50);    // 深绿文字
+
+                    btn.Text = $"{dot}{loc.Code}\n\n空闲待命";
+                    toolTip.SetToolTip(btn, "当前货架完全空闲，可用于入库分配。");
                 }
                 else
                 {
-                    // 空闲：浅绿色
-                    btn.BackColor = Color.FromArgb(238, 250, 240);
-                    btn.ForeColor = Color.FromArgb(10, 160, 80);
-                    btn.Text = $"{loc.Code}\r\n\r\n[ 空闲待命 ]";
+                    if (qty < 50 && qty > 0)
+                    {
+                        // --- 状态 2：零星碎片 (整块浅黄色预警) ---
+                        btn.BackColor = Color.FromArgb(255, 245, 220); // 浅黄底色
+                        btn.ForeColor = Color.FromArgb(180, 100, 0);   // 暗橙文字
+
+                        btn.Text = $"{dot}{loc.Code}\n\n零星碎片\n{qty} 个";
+                        string info = $"物料: {goodsName}\n数量: {qty}\n建议: 可使用智能引擎进行库位合并。";
+                        toolTip.SetToolTip(btn, info);
+                    }
+                    else
+                    {
+                        // --- 状态 3：已占用 (整块浅红色预警) ---
+                        btn.BackColor = Color.FromArgb(255, 230, 230); // 浅红底色
+                        btn.ForeColor = Color.FromArgb(180, 20, 20);   // 深红文字
+
+                        btn.Text = $"{dot}{loc.Code}\n\n已占用\n{qty} 个";
+                        string info = $"物料: {goodsName}\n当前总数量: {qty}";
+                        toolTip.SetToolTip(btn, info);
+                    }
                 }
-                // 把画好的格子塞进流式布局容器里，它会自动帮我们排版！
+
+                btn.Click += (s, e) =>
+                {
+                    MessageBox.Show($"库位编码: {loc.Code}\n存放物料: {(string.IsNullOrEmpty(goodsName) ? "无" : goodsName)}\n数量: {qty}", "库位详情", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                };
+
                 flowLayoutPanel1.Controls.Add(btn);
             }
         }

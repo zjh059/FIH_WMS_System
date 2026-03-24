@@ -24,36 +24,44 @@ namespace FIH_WMS_System.UI
         {
             InitializeComponent();
         }
-        private void DashboardForm_Load(object sender, EventArgs e)
+private void DashboardForm_Load(object sender, EventArgs e)
         {
             // ==========================================
-            // 模块一：柱状图 
+            // 模块一：柱状图 (防遮挡)
             // ==========================================
-            var chartData = wms.GetStockChartData();
+            var rawChartData = wms.GetStockChartData();
+            
+            // 只取库存量最大的前 15 种物料进行展示，防止数据量爆炸导致柱子细
+            var chartData = rawChartData.OrderByDescending(x => x.Value).Take(15).ToList();
+
             UIBarOption option = new UIBarOption();
             option.Title = new UITitle();
-            option.Title.Text = "FIH 仓储各物料总库存看板";
+            option.Title.Text = "FIH 全仓物料总库存看板 (Top 15)";
             option.Title.SubText = "实时数据统计";
 
-            // 把图表绘制区域往右推120个像素，给数字留出空间
-            //option.Grid = new UIGrid { Left = 120 }; 
-            option.Grid.Left = 120;
+            // 【核心优化 2】：增加四个方向的内边距，绝对防止 X/Y 轴文字被控件边缘切掉！
+            option.Grid.Left = 80;   // 给左侧 Y 轴数字留空间
+            option.Grid.Right = 30;  // 右侧防贴边
+            option.Grid.Bottom = 80; // 给底部 X 轴的商品长名字留足空间
 
             option.XAxis.Name = "商品名称";
-            option.YAxis.Name = "数量 (件/桶)";
+            option.YAxis.Name = "数量";
 
             UIBarSeries series = new UIBarSeries();
             series.Name = "实时库存";
+            
             foreach (var item in chartData)
             {
-                option.XAxis.Data.Add(item.Key);
+                // 如果名字太长，可以只截取前 6 个字防止重叠
+                option.XAxis.Data.Add(item.Key); 
                 series.AddData(item.Value);
             }
+            
             option.Series.Add(series);
             uiBarChart1.SetOption(option);
 
             // ==========================================
-            // 模块二：全新的库位占比饼图
+            // 模块二：库位占比饼图 (由于固定只有两项，不会溢出)
             // ==========================================
             var locData = wms.GetLocationUsage();
 
@@ -62,7 +70,6 @@ namespace FIH_WMS_System.UI
             optionPie.Title.Text = "仓库库位占用率分析";
             optionPie.Title.SubText = "空闲 vs 已占用";
 
-            // 开启图例（在饼图旁边显示带有颜色的方块说明）
             optionPie.Legend = new UILegend();
             optionPie.Legend.Orient = UIOrient.Vertical;
             optionPie.Legend.Left = UILeftAlignment.Left;
@@ -70,24 +77,20 @@ namespace FIH_WMS_System.UI
             UIPieSeries seriesPie = new UIPieSeries();
             seriesPie.Name = "库位状态";
 
-            // 格式化标签：名称 : 数量 (百分比) -> 例：已占用 : 2 (66.67%)
-            //seriesPie.Label = new UIPieSeriesLabel { Show = true, Formatter = "{b} : {c} ({d}%)" };
             seriesPie.Label.Show = true;
             seriesPie.Label.Formatter = "{b} : {c} ({d}%)";
 
-            // 把刚才干净数据装进去
             foreach (var item in locData)
             {
                 seriesPie.AddData(item.Key, item.Value);
-
-
-
-                // 2. 👇 必须把名字也加到图例里，否则它找不到名字就会报错越界！
                 optionPie.Legend.AddData(item.Key);
             }
 
             optionPie.Series.Add(seriesPie);
             uiPieChart1.SetOption(optionPie);
         }
+
+
+
     }
 }
