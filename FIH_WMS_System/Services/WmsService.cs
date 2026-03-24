@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using Microsoft.Data.SqlClient;
 using Dapper;
-
+using System.Data.SqlClient;
 
 
 
@@ -1011,6 +1011,178 @@ namespace FIH_WMS_System.Services
                 if (!ok) return false; // 如果某个物料出库异常，立即中止
             }
             return true;
+        }
+
+
+        // ==========================================
+        // 智能制造：贴标入库 (自动生成并记录 ReelId)
+        // ==========================================
+        public string InStockWithLabel(string goodsCode, int qty, string locationCode)
+        {
+            // 引入 Dapper 命名空间 (如果文件顶部没有的话，请确保有 using Dapper; 和 using System.Data.SqlClient;)
+            // using (var db = new System.Data.SqlClient.SqlConnection(connStr))
+            using (var db = new SqlConnection(connStr))
+            {
+                // 【核心新增：物料安检】严格校验物料编码是否存在！
+                int goodsCount = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Goods WHERE Code = @g", new { g = goodsCode });
+                if (goodsCount == 0) return "ERROR_GOODS"; // 找不到该物料的档案，直接打回！
+
+                // 【核心新增：库位安检】严格校验库位编码是否存在！
+                int locCount = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Location WHERE Code = @l", new { l = locationCode });
+                if (locCount == 0) return "ERROR_LOCATION"; // 仓库里根本没这个货架，直接打回！
+
+
+
+                // 1. 生成符合工业标准的唯一追溯码 ReelId (格式：物料码-年月日-4位随机流水号)
+                string reelId = $"{goodsCode}-{DateTime.Now.ToString("yyyyMMdd")}-{new Random().Next(1000, 9999)}";
+                string batchNo = "BATCH-" + DateTime.Now.ToString("yyyyMMdd");
+
+                // 2. 写入库存表 (Stock)
+                string checkSql = "SELECT Id FROM Stock WHERE GoodsCode = @g AND LocationCode = @l";
+                var stockId = db.QueryFirstOrDefault<int?>(checkSql, new { g = goodsCode, l = locationCode });
+
+                if (stockId != null)
+                {
+                    // 如果库位上已经有同类物料，累加数量，并更新最新的 ReelId 和批次
+                    db.Execute("UPDATE Stock SET Qty = Qty + @q, ReelId = @r, BatchNo = @b, InStockTime = GETDATE() WHERE Id = @id",
+                        new { q = qty, r = reelId, b = batchNo, id = stockId });
+                }
+                else
+                {
+                    // 如果是空库位，插入全新库存记录
+                    db.Execute("INSERT INTO Stock (GoodsCode, LocationCode, Qty, BatchNo, ReelId, InStockTime, FrozenQty) VALUES (@g, @l, @q, @b, @r, GETDATE(), 0)",
+                        new { g = goodsCode, l = locationCode, q = qty, b = batchNo, r = reelId });
+                }
+
+                // 3. 写入操作流水账 (StockRecord) - 重点是把 ReelId 记录下来以备追溯！
+                string orderNo = "AUTO-IN-" + DateTime.Now.ToString("HHmmss");
+                db.Execute("INSERT INTO StockRecord (OrderNo, RecordType, GoodsCode, LocationCode, Qty, BatchNo, ReelId, OperateTime, Operator) VALUES (@o, 0, @g, @l, @q, @b, @r, GETDATE(), @op)",
+                    new { o = orderNo, g = goodsCode, l = locationCode, q = qty, b = batchNo, r = reelId, op = FIH_WMS_System.Program.CurrentUsername });
+
+                // 4. 将该库位状态标记为“已占用”
+                db.Execute("UPDATE Location SET IsUsed = 1 WHERE Code = @l", new { l = locationCode });
+
+                return reelId; // 入库成功！将刚生成的身份证号返回给界面去打印！
+            }
+        }
+
+
+        // ==========================================
+        // 基础数据管理：获取所有物料档案
+        // ==========================================
+        public List<dynamic> GetAllGoods()
+        {
+            using (var db = new SqlConnection(connStr))
+            {
+                // 按最新的倒序排列，方便刚添加完就能看到
+                return db.Query("SELECT Code as 商品编码, Name as 商品名称, Spec as 规格, Category as 分类 FROM Goods ORDER BY Id DESC").ToList();
+            }
+        }
+
+        // ==========================================
+        // 基础数据管理：新增物料档案
+        // ==========================================
+        public bool AddNewGoods(string code, string name, string spec, string category)
+        {
+            using (var db = new SqlConnection(connStr))
+            {
+                // 先查一下，防止编码重复录入
+                int count = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Goods WHERE Code = @c", new { c = code });
+                if (count > 0) return false; // 如果已经存在，直接返回失败
+
+                // 写入新的物料档案
+                db.Execute("INSERT INTO Goods (Code, Name, Spec, Category) VALUES (@c, @n, @s, @cat)",
+                    new { c = code, n = name, s = spec, cat = category });
+                return true;
+            }
+        }
+
+
+        // ==========================================
+        // 逆向物流：产线返料退回 (自动合并碎片 + 呼叫AGV)
+        // ==========================================
+        public string SmartReturnMaterial(string goodsCode, int qty)
+        {
+            using (var db = new SqlConnection(connStr))
+            {
+                // 1. 安检：校验物料是否存在
+                int goodsCount = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Goods WHERE Code = @g", new { g = goodsCode });
+                if (goodsCount == 0) return "ERROR_GOODS";
+
+                // 2. 智能算法：找库位。优先找【同类物料且未满的碎片库位】进行合并！
+                string targetLoc = db.QueryFirstOrDefault<string>(
+                    "SELECT TOP 1 LocationCode FROM Stock WHERE GoodsCode = @g ORDER BY Qty ASC", new { g = goodsCode });
+
+                // 如果没找到同类物料，就委屈一下，找一个完全空闲的新库位
+                if (string.IsNullOrEmpty(targetLoc))
+                {
+                    targetLoc = db.QueryFirstOrDefault<string>(
+                        "SELECT TOP 1 Code FROM Location WHERE IsUsed = 0 ORDER BY Code ASC");
+                }
+
+                if (string.IsNullOrEmpty(targetLoc)) return "ERROR_FULL"; // 仓库满了
+
+                // 3. 执行入账
+                string reelId = $"{goodsCode}-RET-{DateTime.Now.ToString("yyyyMMdd")}-{new Random().Next(1000, 9999)}";
+                string batchNo = "RETURN-" + DateTime.Now.ToString("yyyyMMdd"); // 特殊的退料批次前缀
+
+                var stockId = db.QueryFirstOrDefault<int?>("SELECT Id FROM Stock WHERE GoodsCode = @g AND LocationCode = @l", new { g = goodsCode, l = targetLoc });
+
+                if (stockId != null)
+                {
+                    db.Execute("UPDATE Stock SET Qty = Qty + @q, ReelId = @r, BatchNo = @b, InStockTime = GETDATE() WHERE Id = @id", new { q = qty, r = reelId, b = batchNo, id = stockId });
+                }
+                else
+                {
+                    db.Execute("INSERT INTO Stock (GoodsCode, LocationCode, Qty, BatchNo, ReelId, InStockTime, FrozenQty) VALUES (@g, @l, @q, @b, @r, GETDATE(), 0)",
+                        new { g = goodsCode, l = targetLoc, q = qty, b = batchNo, r = reelId });
+                    db.Execute("UPDATE Location SET IsUsed = 1 WHERE Code = @l", new { l = targetLoc });
+                }
+
+                // 4. 写流水账 (记录为入库 RecordType=0)
+                string orderNo = "RETURN-" + DateTime.Now.ToString("HHmmss");
+                db.Execute("INSERT INTO StockRecord (OrderNo, RecordType, GoodsCode, LocationCode, Qty, BatchNo, ReelId, OperateTime, Operator) VALUES (@o, 0, @g, @l, @q, @b, @r, GETDATE(), @op)",
+                    new { o = orderNo, g = goodsCode, l = targetLoc, q = qty, b = batchNo, r = reelId, op = FIH_WMS_System.Program.CurrentUsername });
+
+                // 5. 核心：生成 AGV 回收任务！(起点是产线，终点是算出来的智能库位)
+                string taskNo = "AGV-RET-" + DateTime.Now.ToString("HHmmss");
+                db.Execute("INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) VALUES (@tn, 0, 0, @g, @q, '产线接驳口(退料)', @toLoc, GETDATE())",
+                    new { tn = taskNo, g = goodsCode, q = qty, toLoc = targetLoc });
+
+                return targetLoc; // 返回算出来的库位名，给界面弹窗用
+            }
+        }
+
+
+        // ==========================================
+        // 基础数据管理：批量导入物料档案
+        // ==========================================
+        public (int successCount, int failCount) BatchAddGoods(List<Models.Goods> goodsList)
+        {
+            int successCount = 0;
+            int failCount = 0; // 记录有多少条因为编码重复被跳过
+
+            using (var db = new SqlConnection(connStr))
+            {
+                foreach (var g in goodsList)
+                {
+                    // 查重：防止导入的 Excel 里有已经建过档的物料
+                    int count = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Goods WHERE Code = @c", new { c = g.Code });
+
+                    if (count == 0)
+                    {
+                        // 没见过的新物料，直接插入！
+                        db.Execute("INSERT INTO Goods (Code, Name, Spec, Category) VALUES (@c, @n, @s, @cat)",
+                            new { c = g.Code, n = g.Name, s = g.Spec, cat = g.Category });
+                        successCount++;
+                    }
+                    else
+                    {
+                        failCount++; // 遇到重复的老物料，跳过并计数
+                    }
+                }
+            }
+            return (successCount, failCount); // 返回战报
         }
 
 

@@ -5,8 +5,7 @@ namespace FIH_WMS_System
 {
     public partial class MainForm : UIForm
     {
-        //演示：在主窗口中直接使用服务层，简化设计
-        // 1. 在窗口级别，声明并实例化我们的核心服务（主厨）
+        //在窗口声明并实例化核心服务
         private Services.WmsService wms = new Services.WmsService();
         public MainForm()
         {
@@ -17,6 +16,57 @@ namespace FIH_WMS_System
                         wms.InStock("G001", 10, "A-01-01");
                         wms.InStock("G002", 5, "B-01-01");*/
         }
+
+        // 窗口加载时触发的事件
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            // 1. 左上角的标题栏显示当前登录人的名字和身份
+            this.Text = $"FIH 智能仓储管理系统 - 当前登录：【{Program.CurrentUsername}】 ({Program.CurrentRole})";
+
+            // 2. 权限校验：如果是普通操作员，锁死危险的改账操作
+            if (Program.CurrentRole == "操作员")
+            {
+                // 禁用移库 (uiButton5)
+                uiButton5.Enabled = false;
+                uiButton5.Text = "🚫 无权限(移库)";
+
+                // 禁用盘点 (uiButton6)
+                uiButton6.Enabled = false;
+                uiButton6.Text = "🚫 无权限(盘点)";
+
+                // 隐藏 AGV 手动调度中心 (控制危险)
+                //uiButton7.Visible = false;
+                uiButton7.Enabled = false;
+                uiButton7.Text = "🚫禁用(AVG调度)";
+
+                btnBaseData.Enabled = false;
+                btnBaseData.Text = "🚫(⚙️数据管理)";
+
+
+                // （大屏看板 uiButton8 和 2D地图 uiButton9 可以保留看，如果不给看也可以设为 false）
+            }
+        }
+        private void btnLogout_Click(object sender, EventArgs e) // 假设你的按钮叫 btnLogout，请以你实际双击出来的名字为准
+        {
+            // 1. 弹出一个确认框，防止手抖误触
+            DialogResult result = MessageBox.Show(
+                "您确定要登出当前账号，并返回登录界面吗？",
+                "登出提示",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            // 2. 如果用户点击了“是”
+            if (result == DialogResult.Yes)
+            {
+                // Application.Restart() 可以关闭当前程序，并瞬间重新启动它
+                // 这样可以自动跳回 Program.cs 里的 LoginForm 登录页，
+                // 还能清空所有的全局变量（就像Program.CurrentUsername），防止上一个人的状态残留
+                Application.Restart();
+            }
+        }
+
+
+
 
         private void button3_Click(object sender, EventArgs e)
         {
@@ -37,50 +87,82 @@ namespace FIH_WMS_System
 
         private void uiButton1_Click(object sender, EventArgs e)
         {
-            //1. 召唤入库子窗口
+            // 1. 召唤入库子窗口
             InStockForm form = new InStockForm();
-
-            // 2. 只有当子窗口返回了 OK 信号（说明用户点了确认并且输入没报错）
-            //form.ShowDialog();
 
             if (form.ShowDialog() == DialogResult.OK)
             {
-                // 3. 从子窗口的口袋里，把刚才填的数据拿出来，交给Service层去入库！
-                bool success = wms.InStock(form.InputGoodsCode, form.InputQty, form.InputLocCode);
+                // 2. 智能入库引擎，获取系统颁发的“身份证号(ReelId)”
+                string generatedReelId = wms.InStockWithLabel(form.InputGoodsCode, form.InputQty, form.InputLocCode);
 
-                if (success)
+                // 【核心新增：精准的错误弹窗拦截】
+                if (generatedReelId == "ERROR_GOODS")
                 {
-
-                    Utils.VoiceHelper.Speak("商品入库成功，已为您生成专属物料二维码。");
-
-                    MessageBox.Show("🎉 入库成功！数据已更新。", "系统提示");
-
-
-
-                    // 【扫码核心：动态生成并展示二维码贴纸！】
-                    // 我们把 商品编码 藏在二维码里，将来扫码枪一扫就能读出来
-                    string qrContent = form.InputGoodsCode;
-                    Bitmap qrImage = Utils.BarcodeHelper.GenerateQRCode(qrContent);
+                    Utils.VoiceHelper.Speak("警告，物料编码不存在");
+                    MessageBox.Show($"❌ 入库拦截：系统基础物料库中不存在编码为【{form.InputGoodsCode}】的商品！\n请先在基础数据中登记该物料，再进行入库。", "非法操作", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else if (generatedReelId == "ERROR_LOCATION")
+                {
+                    Utils.VoiceHelper.Speak("警告，库位编码不存在");
+                    MessageBox.Show($"❌ 入库拦截：仓库中不存在编码为【{form.InputLocCode}】的库位！\n请检查货架条码是否扫描正确。", "非法操作", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
 
 
 
-                    // “凭空”捏造一个小窗口，用来展示打印出来的二维码
+                else if (!string.IsNullOrEmpty(generatedReelId))
+                {
+                    Utils.VoiceHelper.Speak("商品入库成功，已为您生成防呆追溯标签。");
+                    MessageBox.Show("🎉 入库成功！数据已更新，正在生成标签...", "系统提示");
+
+                    // ==========================================
+                    // 3. 核心：用代码动态画一张“工业级物料追溯贴纸”！
+                    // ==========================================
+                    Bitmap labelImage = new Bitmap(420, 240); // 设定贴纸的物理尺寸
+                    using (Graphics g = Graphics.FromImage(labelImage))
+                    {
+                        // 涂上纯白底色，并画一个黑色粗边框
+                        g.Clear(Color.White);
+                        g.DrawRectangle(new Pen(Color.Black, 3), 5, 5, 410, 230);
+
+                        // 设置字体
+                        Font titleFont = new Font("微软雅黑", 14, FontStyle.Bold);
+                        Font textFont = new Font("微软雅黑", 10, FontStyle.Bold);
+
+                        // 画顶部公司抬头和分割线
+                        g.DrawString("FIH 智能制造 - 物料追溯标签", titleFont, Brushes.Black, 50, 15);
+                        g.DrawLine(Pens.Black, 10, 45, 410, 45);
+
+                        // 画左侧的具体入库明细
+                        g.DrawString($"物料编码: {form.InputGoodsCode}", textFont, Brushes.Black, 20, 60);
+                        g.DrawString($"入库数量: {form.InputQty} (PCS/桶)", textFont, Brushes.Black, 20, 90);
+                        g.DrawString($"存放库位: {form.InputLocCode}", textFont, Brushes.Black, 20, 120);
+                        g.DrawString($"入库人员: {Program.CurrentUsername}", textFont, Brushes.Black, 20, 150);
+                        g.DrawString($"入库时间: {DateTime.Now:yyyy-MM-dd HH:mm}", textFont, Brushes.Black, 20, 180);
+
+                        // 画右侧的二维码 (把 ReelId 藏在二维码里！)
+                        Bitmap qrCode = Utils.BarcodeHelper.GenerateQRCode(generatedReelId);
+                        g.DrawImage(qrCode, 260, 55, 130, 130);
+
+                        // 在二维码下方打印出 ReelId 的明文
+                        g.DrawString($"Reel ID: {generatedReelId}", new Font("Arial", 8, FontStyle.Regular), Brushes.Black, 250, 195);
+                    }
+
+                    // 4. 一个小窗口，用来展示此打印贴纸
                     Form qrForm = new Form();
-                    qrForm.Text = "🖨️ 请将此标签打印并贴在货物上";
-                    qrForm.Size = new System.Drawing.Size(300, 350);
+                    qrForm.Text = "🖨️ 请将此标签使用斑马打印机打印并贴在货物上";
+                    qrForm.Size = new System.Drawing.Size(460, 300);
                     qrForm.StartPosition = FormStartPosition.CenterParent;
-                    qrForm.BackColor = Color.White;
+                    qrForm.BackColor = Color.LightGray;
 
-                    // 加一个图片控件装载二维码
                     PictureBox pb = new PictureBox();
-                    pb.Image = qrImage;
+                    pb.Image = labelImage;
                     pb.SizeMode = PictureBoxSizeMode.CenterImage;
                     pb.Dock = DockStyle.Fill;
 
                     qrForm.Controls.Add(pb);
-                    qrForm.ShowDialog(); // 弹出这张虚拟的“打印贴纸”
+                    qrForm.ShowDialog(); // 弹出贴纸！
 
-                    // 4.成功后，自动点一下“库存查询”按钮，刷新右边表格
+                    // 5. 成功后，自动点一下“库存查询”按钮，刷新右边表格
                     uiButton3_Click(null, null);
                 }
                 else
@@ -361,46 +443,6 @@ namespace FIH_WMS_System
         }
 
 
-
-        // 窗口加载时触发的事件
-        private void MainForm_Load(object sender, EventArgs e)
-        {
-            // 1. 在左上角的标题栏，显示当前登录人的名字和身份！
-            this.Text = $"FIH 智能仓储管理系统 - 当前登录：【{Program.CurrentUsername}】 ({Program.CurrentRole})";
-
-            // 2. 权限校验：如果是普通操作员，把高级功能的按钮藏起来！
-            if (Program.CurrentRole == "操作员")
-            {
-                // 假设 uiButton7 是AGV，uiButton8 是大屏，uiButton9 是2D地图
-                // 请根据界面上实际的按钮名字修改！
-                uiButton7.Visible = false; // 隐藏 AGV调度中心
-                uiButton8.Visible = false; // 隐藏 数据大屏看板
-                uiButton9.Visible = false; // 隐藏 2D库位监控
-
-                // 或许！ 也可以把盘点、移库的按钮给禁用掉
-                // uiButton5.Enabled = false; 
-            }
-        }
-
-        private void btnLogout_Click(object sender, EventArgs e) // 假设你的按钮叫 btnLogout，请以你实际双击出来的名字为准
-        {
-            // 1. 弹出一个确认框，防止手抖误触
-            DialogResult result = MessageBox.Show(
-                "您确定要登出当前账号，并返回登录界面吗？",
-                "登出提示",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            // 2. 如果用户点击了“是”
-            if (result == DialogResult.Yes)
-            {
-                // Application.Restart() 可以关闭当前程序，并瞬间重新启动它
-                // 这样可以自动跳回 Program.cs 里的 LoginForm 登录页，
-                // 还能清空所有的全局变量（就像Program.CurrentUsername），防止上一个人的状态残留
-                Application.Restart();
-            }
-        }
-
         //一键导出--表格处理
         private void btnExportExcel_Click(object sender, EventArgs e)
         {
@@ -414,7 +456,20 @@ namespace FIH_WMS_System
             form.ShowDialog();
         }
 
+        private void btnBaseData_Click(object sender, EventArgs e)
+        {
+            UI.BaseDataForm form = new UI.BaseDataForm();
+            form.ShowDialog();
+        }
 
-
+        private void btnReturnStock_Click(object sender, EventArgs e)
+        {
+            UI.ReturnStockForm form = new UI.ReturnStockForm();
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                // 返料成功关闭窗口后，顺手刷新一下库存表格
+                uiButton3_Click(null, null);
+            }
+        }
     }
 }

@@ -76,5 +76,49 @@ namespace FIH_WMS_System.Utils
                 }
             }
         }
+
+
+        // ==========================================
+        // 全局新增：从 Excel 批量读取物料数据
+        // ==========================================
+        public static List<Models.Goods> ImportGoodsFromExcel(string filePath)
+        {
+            var list = new List<Models.Goods>();
+
+            // 使用 ClosedXML 打开 Excel 工作簿
+            using (var workbook = new XLWorkbook(filePath))
+            {
+                // 获取第一个工作表 (Sheet1)
+                var worksheet = workbook.Worksheets.Worksheet(1);
+
+                // 获取有数据的区域，并跳过第一行 (第一行通常是表头：编码、名称、规格...)
+                var rows = worksheet.RangeUsed().RowsUsed().Skip(1);
+
+                foreach (var row in rows)
+                {
+                    // 按列提取数据 (假设A列是编码, B列是名称, C列是规格, D列是分类)
+                    string code = row.Cell(1).GetString().Trim();
+                    string name = row.Cell(2).GetString().Trim();
+                    string spec = row.Cell(3).GetString().Trim();
+                    string category = row.Cell(4).GetString().Trim();
+
+                    // 防呆：编码和名称绝对不能为空
+                    if (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(name))
+                    {
+                        list.Add(new Models.Goods
+                        {
+                            Code = code,
+                            Name = name,
+                            Spec = spec,
+                            Category = category
+                        });
+                    }
+                }
+            }
+            return list;
+        }
+
+
+
     }
 }
