@@ -497,5 +497,14 @@ namespace FIH_WMS_System
                 uiButton3_Click(null, null);
             }
         }
+
+        private void btnWaveOut_Click(object sender, EventArgs e)
+        {
+            UI.WaveForm form = new UI.WaveForm();
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                uiButton3_Click(null, null); // 执行完波次后，刷新库存表格
+            }
+        }
     }
 }

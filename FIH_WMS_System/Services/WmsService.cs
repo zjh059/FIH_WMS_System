@@ -1200,6 +1200,88 @@ namespace FIH_WMS_System.Services
         }
 
 
+        // ==========================================
+        // 核心防呆：BOM 齐套性短板检查 (木桶效应)
+        // ==========================================
+        public string CheckBOMShortage(string parentGoodsCode, int produceQty)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                // 1. 展开 BOM 树：查出造这个产品都需要哪些零件，各需要多少个？
+                string bomSql = "SELECT ChildGoodsCode, RequiredQty FROM ProductBOM WHERE ParentGoodsCode = @p";
+                var bomList = db.Query(bomSql, new { p = parentGoodsCode }).ToList();
+
+                // 如果这个物料根本没有 BOM（说明它就是个普通零件，不是组装成品），直接放行
+                if (bomList.Count == 0) return "";
+
+                System.Text.StringBuilder shortageMsg = new System.Text.StringBuilder();
+
+                // 2. 遍历每一个子零件，去仓库里翻账本算总账
+                foreach (var item in bomList)
+                {
+                    string childCode = item.ChildGoodsCode;
+                    // 计算出产线总共需要的数量 (单机用量 * 生产台数)
+                    int requiredTotal = (int)(item.RequiredQty * produceQty);
+
+                    // 查出当前仓库里，这个子零件【所有货架加起来的总可用库存】
+                    int availableQty = db.QueryFirstOrDefault<int>(
+                        "SELECT ISNULL(SUM(Qty), 0) FROM Stock WHERE GoodsCode = @c", new { c = childCode });
+
+                    // 3. 木桶理论：只要可用库存小于总需求，立刻记入“黑名单”！
+                    if (availableQty < requiredTotal)
+                    {
+                        // 顺手查一下这个零件叫什么名字，方便报错时显示信息
+                        string goodsName = db.QueryFirstOrDefault<string>(
+                            "SELECT Name FROM Goods WHERE Code = @c", new { c = childCode });
+
+                        int gap = requiredTotal - availableQty; // 计算缺口
+                        shortageMsg.AppendLine($"📦 【{goodsName}】(编码:{childCode})：需 {requiredTotal} 个，库存仅 {availableQty} 个，缺口 {gap} 个！");
+                    }
+                }
+
+                // 返回最终的缺料黑名单。如果长度为0，说明齐套，顺利过关！
+                return shortageMsg.ToString();
+            }
+        }
+
+
+        // ==========================================
+        // 智能制造：3. 波次运算 (Wave Picking) - 多工单物料合并引擎
+        // ==========================================
+        public List<BOMRequirement> AnalyzeWaveBOM(Dictionary<string, int> waveOrders)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                var combinedList = new List<BOMRequirement>();
+
+                // 1. 挨个展开波次里每一个工单的 BOM 需求
+                foreach (var order in waveOrders)
+                {
+                    var singleRequirements = AnalyzeBOM(order.Key, order.Value);
+                    combinedList.AddRange(singleRequirements);
+                }
+
+                // 2. 波次核心算法：同类项合并！(把不同工单里相同的零件需求加在一起)
+                var waveResult = combinedList
+                    .GroupBy(x => new { x.ChildGoodsCode, x.ChildGoodsName })
+                    .Select(g => new BOMRequirement
+                    {
+                        ChildGoodsCode = g.Key.ChildGoodsCode,
+                        ChildGoodsName = g.Key.ChildGoodsName,
+                        // 需求量：把所有工单对这个零件的需求累加
+                        RequiredTotalQty = g.Sum(x => x.RequiredTotalQty),
+                        // 可用库存：无论几个工单，查出来的全仓可用库存是一样的，取第一条即可
+                        CurrentAvailableQty = g.First().CurrentAvailableQty
+                        // 防呆重算：合并后需求变大了，必须重新判断库存还够不够！
+                        //IsEnough = g.First().CurrentAvailableQty >= g.Sum(x => x.RequiredTotalQty)
+                    })
+                    .ToList();
+
+                return waveResult;
+            }
+        }
+
+
 
     }
 }

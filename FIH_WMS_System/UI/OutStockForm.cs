@@ -142,6 +142,9 @@ namespace FIH_WMS_System.UI
             // 检查是否有缺料情况
             if (currentBOMReqs.Any(r => !r.IsEnough))
             {
+                //语音播报警告
+                Utils.VoiceHelper.Speak("齐套检查失败，严禁盲目发料！");
+
                 MessageBox.Show("警告：底层原材料库存不足以支撑该工单生产！\n出库任务已被拦截，请先安排采购入库。", "齐套性拦截", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }

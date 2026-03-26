@@ -45,7 +45,9 @@ namespace FIH_WMS_System.Services
             {
                 case OutboundStrategy.FIFO:
                     // 先进先出：入库时间越早的，排在越前面
-                    return availableStocks.OrderBy(s => s.InStockTime).ToList();
+                    //return availableStocks.OrderBy(s => s.InStockTime).ToList();
+                    // 先进先出：入库时间越早的排前面。如果时间一样，优先出数量少的（清空碎片货架）
+                    return availableStocks.OrderBy(s => s.InStockTime).ThenBy(s => s.Qty).ToList();
 
                 case OutboundStrategy.LIFO:
                     // 后进先出：入库时间越晚的，排在越前面
