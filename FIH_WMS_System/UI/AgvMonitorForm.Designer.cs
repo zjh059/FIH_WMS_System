@@ -12,10 +12,12 @@
 
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             dgvTasks = new DataGridView();
             btnRefresh = new Button();
             btnComplete = new Button();
             labelTitle = new Label();
+            timer1 = new System.Windows.Forms.Timer(components);
             ((System.ComponentModel.ISupportInitialize)dgvTasks).BeginInit();
             SuspendLayout();
             // 
@@ -71,6 +73,12 @@
             labelTitle.TabIndex = 0;
             labelTitle.Text = "🤖 WCS - AGV 小车调度控制台";
             // 
+            // timer1
+            // 
+            timer1.Enabled = true;
+            timer1.Interval = 3000;
+            timer1.Tick += timer1_Tick;
+            // 
             // AgvMonitorForm
             // 
             ClientSize = new Size(1320, 822);
@@ -92,5 +100,6 @@
         private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.Button btnComplete;
         private System.Windows.Forms.Label labelTitle;
+        private System.Windows.Forms.Timer timer1;
     }
 }

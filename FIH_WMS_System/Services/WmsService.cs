@@ -16,7 +16,9 @@ namespace FIH_WMS_System.Services
     public class WmsService
     {
         // 数据库连接
-        private string connStr = "Server=LAPTOP-9IABD0I1;Database=FIH_WMS_DB;User Id=sa;Password=123456;TrustServerCertificate=True;";
+        //private string connStr = "Server=LAPTOP-9IABD0I1;Database=FIH_WMS_DB;User Id=sa;Password=123456;TrustServerCertificate=True;";
+        // 数据库连接 (使用 . 代表本机 localhost，相对路径！)
+        private string connStr = "Server=.;Database=FIH_WMS_DB;User Id=sa;Password=123456;TrustServerCertificate=True;";
 
         // ==========================================
         // 1. 入库操作 (升级版：支持批次和单据)
@@ -239,7 +241,7 @@ namespace FIH_WMS_System.Services
             using (var db = new SqlConnection(connStr))
             {
                 string sql = @"
-                    SELECT s.Id, s.Qty, s.BatchNo, s.ProduceDate, s.InStockTime,
+                    SELECT s.Id, s.ReelId, s.Qty, s.BatchNo, s.ProduceDate, s.InStockTime,
                            g.Id, g.Code, g.Name, g.Spec, g.Price, g.Category,
                            l.Id, l.Code, l.Area, l.IsUsed
                     FROM Stock s
@@ -269,7 +271,7 @@ namespace FIH_WMS_System.Services
             using (var db = new SqlConnection(connStr))
             {
                 string sql = @"
-                    SELECT r.Id, r.RecordType as Type, r.OrderNo, r.BatchNo, r.Qty, r.OperateTime, r.Operator,
+                    SELECT r.Id, r.ReelId, r.RecordType as Type, r.OrderNo, r.BatchNo, r.Qty, r.OperateTime, r.Operator,
                            g.Id, g.Code, g.Name, g.Spec, g.Price, g.Category,
                            l.Id, l.Code, l.Area, l.IsUsed
                     FROM StockRecord r
@@ -664,13 +666,13 @@ namespace FIH_WMS_System.Services
 
                 // 使用 GROUP BY 和 SUM，确保每个库位只返回唯一的一行汇总数据
                 string sql = @"
-                    SELECT l.Code, l.IsUsed, 
+                    SELECT l.Code, l.IsUsed, l.Status,
                            MAX(ISNULL(g.Name, '')) as GoodsName, 
                            SUM(ISNULL(s.Qty, 0)) as Qty
                     FROM Location l
                     LEFT JOIN Stock s ON l.Code = s.LocationCode
                     LEFT JOIN Goods g ON s.GoodsCode = g.Code
-                    GROUP BY l.Code, l.IsUsed
+                    GROUP BY l.Code, l.IsUsed, l.Status
                     ORDER BY l.Code";
 
                 // Dapper 支持直接返回 dynamic 动态类型，适合混合数据
@@ -1183,6 +1185,18 @@ namespace FIH_WMS_System.Services
                 }
             }
             return (successCount, failCount); // 返回战报
+        }
+
+
+        // ==========================================
+        // 库位管理：切换库位状态 (0=正常, 1=锁定停用)
+        // ==========================================
+        public void ToggleLocationStatus(string locCode, int newStatus)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Execute("UPDATE Location SET Status = @s WHERE Code = @c", new { s = newStatus, c = locCode });
+            }
         }
 
 

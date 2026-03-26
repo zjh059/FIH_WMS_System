@@ -283,6 +283,7 @@ namespace FIH_WMS_System
             var displayList = rawStock.Select(s => new
             {
                 库存编号 = s.Id,
+                唯一追溯码 = s.ReelId,
                 物料名称 = s.Goods?.Name,
                 物料编码 = s.Goods?.Code,
                 所在库位 = s.Location?.Code,
@@ -291,7 +292,7 @@ namespace FIH_WMS_System
                 入库时间 = s.InStockTime.ToString("yyyy-MM-dd") // 👈 【新增展示】
             }).ToList();
 
-            // 3. 把包装好的数据直接“喂”给表格控件！(假设你的表格叫 dataGridView1)
+            // 3. 把包装好的数据直接给表格控件！
             dataGridView1.DataSource = null;// 先清空一下，强制刷新
             dataGridView1.DataSource = displayList;//绑定新数据
 
@@ -311,6 +312,7 @@ namespace FIH_WMS_System
                 记录编号 = r.Id,
                 单据号 = r.OrderNo,               // 👈 【新增展示】查账必备
                 // ⚠️ 三元表达式：如果是 InStock 就显示"入库"，否则显示"出库"
+                唯一追溯码 = r.ReelId,
                 操作类型 = r.Type == FIH_WMS_System.Models.RecordType.InStock ? "▲ 入库 (+)" : "▼ 出库 (-)",
                 物料名称 = r.Goods?.Name,
                 所在库位 = r.Location?.Code,      // 👈 【新增展示】明确货物在哪进出的

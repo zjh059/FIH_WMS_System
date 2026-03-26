@@ -118,5 +118,11 @@ namespace FIH_WMS_System.UI
                 LoadData(); // 重新刷新表格，你会看到它瞬间变成绿色的“✅ 已送达”，并打上完成时间戳！
             }
         }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            // 每隔3秒，定时器会自动执行这句代码，悄无声息地刷新 AGV 最新状态！
+            LoadData();
+        }
     }
 }

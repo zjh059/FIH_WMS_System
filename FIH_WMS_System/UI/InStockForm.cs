@@ -123,6 +123,10 @@ namespace FIH_WMS_System.UI
 
             // 默认选中 "按未满库位入库"
             cmbStrategy.SelectedValue = InboundStrategy.SameMaterialMerge;
+
+            // 绑定扫码枪(回车键)监听事件
+            txtGoodsCode.KeyDown += new KeyEventHandler(txtGoodsCode_KeyDown);
+            txtQty.KeyDown += new KeyEventHandler(txtQty_KeyDown);
         }
 
 
@@ -168,6 +172,39 @@ namespace FIH_WMS_System.UI
                 {
                     MessageBox.Show("⚠️ 仓库当前可能已满，或未找到符合策略的可用库位，请人工确认！", "系统警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
+            }
+        }
+
+
+        // ==========================================
+        // 扫码枪专属：扫完物料码，自动触发智能分配库位！
+        // ==========================================
+        private void txtGoodsCode_KeyDown(object sender, KeyEventArgs e)
+        {
+            // 如果监听到回车键 (扫码枪的默认行为)
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true; // 消除系统默认的 '叮' 提示音
+
+                // 1. 瞬间自动点击“智能推荐”按钮
+                btnRecommend_Click(null, null);
+
+                // 2. 将光标自动跳到“数量”框，让工人可以直接填数量！
+                txtQty.Focus();
+            }
+        }
+
+        // ==========================================
+        // 扫码枪专属：填完数量敲回车，自动提交入库！
+        // ==========================================
+        private void txtQty_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+
+                // 瞬间自动点击“确认入库”按钮
+                btnConfirm_Click(null, null);
             }
         }
 

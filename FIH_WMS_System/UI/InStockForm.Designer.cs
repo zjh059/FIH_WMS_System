@@ -60,6 +60,7 @@
             // 
             // txtGoodsCode
             // 
+            txtGoodsCode.BackColor = SystemColors.Info;
             txtGoodsCode.Location = new Point(169, 43);
             txtGoodsCode.Name = "txtGoodsCode";
             txtGoodsCode.Size = new Size(220, 34);

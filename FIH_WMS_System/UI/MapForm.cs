@@ -50,64 +50,79 @@ namespace FIH_WMS_System.UI
                 Button btn = new Button();
                 btn.Size = new Size(180, 140);
                 btn.FlatStyle = FlatStyle.Flat;
-                btn.FlatAppearance.BorderSize = 1; // 加上一个细细的灰色边框，更有质感
-                btn.FlatAppearance.BorderColor = Color.LightGray; // 边框颜色
-
-                // 使用专门适合在文本前面放圆点的字体和大小
+                btn.FlatAppearance.BorderSize = 1;
+                btn.FlatAppearance.BorderColor = Color.LightGray;
                 btn.Font = new Font("微软雅黑", 10F, FontStyle.Bold);
                 btn.Margin = new Padding(12);
-                btn.Padding = new Padding(10); // 加上内边距，让内容更呼吸
-
-                // 核心：不需要 TextImageRelation，直接让文字整体居中
+                btn.Padding = new Padding(10);
                 btn.TextAlign = ContentAlignment.MiddleCenter;
 
                 bool isUsed = loc.IsUsed;
+                int status = loc.Status != null ? (int)loc.Status : 0; // 提取物理状态
                 int qty = loc.Qty != null ? (int)loc.Qty : 0;
                 string goodsName = loc.GoodsName;
-
-                // 定义 Unicode 圆点字符
                 string dot = "● ";
 
-                if (!isUsed)
+                // 核心视觉渲染：优先判断是否被锁定！
+                if (status == 1)
                 {
-                    // --- 状态 1：空闲待命 (整块浅绿色预警) ---
-                    btn.BackColor = Color.FromArgb(220, 245, 230); // 浅绿底色
-                    btn.ForeColor = Color.FromArgb(0, 130, 50);    // 深绿文字
-
+                    // --- 状态 4：锁定停用 (整块高级灰黑预警) ---
+                    btn.BackColor = Color.FromArgb(200, 200, 200);
+                    btn.ForeColor = Color.FromArgb(80, 80, 80);
+                    btn.Text = $"🔒 {loc.Code}\n\n已锁定 (维修/停用)";
+                    toolTip.SetToolTip(btn, "该库位已被管理员手动锁定，停止分配。");
+                }
+                else if (!isUsed)
+                {
+                    // --- 状态 1：空闲待命 ---
+                    btn.BackColor = Color.FromArgb(220, 245, 230);
+                    btn.ForeColor = Color.FromArgb(0, 130, 50);
                     btn.Text = $"{dot}{loc.Code}\n\n空闲待命";
                     toolTip.SetToolTip(btn, "当前货架完全空闲，可用于入库分配。");
                 }
                 else
                 {
+                    // --- 状态 2/3：零星碎片与已占用 ---
                     if (qty < 50 && qty > 0)
                     {
-                        // --- 状态 2：零星碎片 (整块浅黄色预警) ---
-                        btn.BackColor = Color.FromArgb(255, 245, 220); // 浅黄底色
-                        btn.ForeColor = Color.FromArgb(180, 100, 0);   // 暗橙文字
-
+                        btn.BackColor = Color.FromArgb(255, 245, 220);
+                        btn.ForeColor = Color.FromArgb(180, 100, 0);
                         btn.Text = $"{dot}{loc.Code}\n\n零星碎片\n{qty} 个";
-                        string info = $"物料: {goodsName}\n数量: {qty}\n建议: 可使用智能引擎进行库位合并。";
-                        toolTip.SetToolTip(btn, info);
                     }
                     else
                     {
-                        // --- 状态 3：已占用 (整块浅红色预警) ---
-                        btn.BackColor = Color.FromArgb(255, 230, 230); // 浅红底色
-                        btn.ForeColor = Color.FromArgb(180, 20, 20);   // 深红文字
-
+                        btn.BackColor = Color.FromArgb(255, 230, 230);
+                        btn.ForeColor = Color.FromArgb(180, 20, 20);
                         btn.Text = $"{dot}{loc.Code}\n\n已占用\n{qty} 个";
-                        string info = $"物料: {goodsName}\n当前总数量: {qty}";
-                        toolTip.SetToolTip(btn, info);
                     }
+                    toolTip.SetToolTip(btn, $"物料: {goodsName}\n数量: {qty}");
                 }
 
+                // 左键点击：查看详情
                 btn.Click += (s, e) =>
                 {
-                    MessageBox.Show($"库位编码: {loc.Code}\n存放物料: {(string.IsNullOrEmpty(goodsName) ? "无" : goodsName)}\n数量: {qty}", "库位详情", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"库位编码: {loc.Code}\n物理状态: {(status == 1 ? "🔒 已锁定" : "✅ 正常")}\n存放物料: {(string.IsNullOrEmpty(goodsName) ? "无" : goodsName)}\n数量: {qty}", "库位详情", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 };
+
+                // 👇 核心新增：生成右键菜单 (ContextMenuStrip)
+                ContextMenuStrip cms = new ContextMenuStrip();
+                ToolStripMenuItem lockItem = new ToolStripMenuItem(status == 0 ? "🔒 设为锁定 (停用此货架)" : "✅ 解除锁定 (恢复正常运作)");
+                lockItem.Click += (s, e) =>
+                {
+                    // 呼叫大脑修改数据库状态，然后立即刷新地图！
+                    wms.ToggleLocationStatus(loc.Code, status == 0 ? 1 : 0);
+                    DrawMap();
+                };
+                cms.Items.Add(lockItem);
+
+                // 将做好的菜单挂载给这个货架按钮
+                btn.ContextMenuStrip = cms;
 
                 flowLayoutPanel1.Controls.Add(btn);
             }
+
+
+
         }
     }
 }
