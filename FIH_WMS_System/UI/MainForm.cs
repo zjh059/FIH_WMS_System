@@ -66,6 +66,27 @@ namespace FIH_WMS_System
 
 
                 // （大屏看板 uiButton8 和 2D地图 uiButton9 可以保留看，如果不给看也可以设为 false）
+
+
+                // ==========================================
+                // 【新增】登录时主动扫描安全库存预警！
+                // ==========================================
+                if (Program.CurrentRole == "管理员") // 只给管理员弹警告
+                {
+                    var warnings = wms.GetLowStockWarnings();
+                    if (warnings.Count > 0)
+                    {
+                        // 播放警报语音
+                        Utils.VoiceHelper.Speak("系统警报：检测到部分物料低于安全库存底线，请立即处理！");
+
+                        // 弹出我们刚才写好的预警窗口
+                        UI.WarningForm warningForm = new UI.WarningForm();
+                        warningForm.ShowDialog();
+                    }
+                }
+
+
+
             }
         }
         private void btnLogout_Click(object sender, EventArgs e) // 假设你的按钮叫 btnLogout，请以你实际双击出来的名字为准

@@ -17,6 +17,8 @@ namespace FIH_WMS_System.Models
         public string Name { get; set; } = string.Empty;    // 名称
         public string Spec { get; set; } = string.Empty;    // 规格
         public decimal Price { get; set; }                  // 单价
-        public string Category { get; set; } = string.Empty;// 【新增】物料分类
+        public string Category { get; set; } = string.Empty;// 物料分类
+
+        public int SafeQty { get; set; }// 安全库存报警线
     }
 }
