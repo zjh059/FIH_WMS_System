@@ -1282,6 +1282,80 @@ namespace FIH_WMS_System.Services
         }
 
 
+        // ==========================================
+        // 智能预警：查询所有低于安全库存的物料
+        // ==========================================
+        public List<dynamic> GetLowStockWarnings()
+        {
+            using (var db = new SqlConnection(connStr))
+            {
+                // 使用 SQL 聚合查询：把每个物料的总库存算出来，然后和 SafeQty 对比
+                string sql = @"
+                    SELECT 
+                        g.Code AS GoodsCode, 
+                        g.Name AS GoodsName, 
+                        g.SafeQty AS SafeQty, 
+                        ISNULL(SUM(s.Qty - s.FrozenQty), 0) AS CurrentTotalQty
+                    FROM Goods g
+                    LEFT JOIN Stock s ON g.Code = s.GoodsCode
+                    GROUP BY g.Code, g.Name, g.SafeQty
+                    -- 只筛选出当前总数小于安全库存的物料 (并且安全库存得大于0才报警)
+                    HAVING ISNULL(SUM(s.Qty - s.FrozenQty), 0) < g.SafeQty AND g.SafeQty > 0";
+
+                return db.Query(sql).ToList();
+            }
+        }
+
+
+        // ==========================================
+        // 智能预警：一键自动生成采购补货单
+        // ==========================================
+        public bool AutoGeneratePurchaseOrder()
+        {
+            // 1. 先查出到底有哪些物料缺货
+            var shortageList = GetLowStockWarnings();
+            if (shortageList.Count == 0) return false;
+
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 2. 生成一个宏观的“采购入库单” (OrderType = 0 表示入库)
+                        string orderNo = "PUR-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+                        db.Execute("INSERT INTO WmsOrder (OrderNo, OrderType, Status, CreateTime) VALUES (@o, 0, 0, GETDATE())",
+                                   new { o = orderNo }, transaction);
+
+                        // 3. 遍历所有缺货的物料，把它们塞进这张单子的明细里
+                        foreach (var item in shortageList)
+                        {
+                            // 计算缺口：安全库存 - 当前真实可用库存
+                            int safeQty = (int)item.SafeQty;
+                            int currentQty = (int)item.CurrentTotalQty;
+                            int needQty = safeQty - currentQty;
+
+                            if (needQty <= 0) continue;
+
+                            // 写入订单明细表 (WmsOrderDetail)
+                            db.Execute("INSERT INTO WmsOrderDetail (OrderNo, GoodsCode, PlanQty, ActualQty, Status) VALUES (@o, @g, @q, 0, 0)",
+                                new { o = orderNo, g = (string)item.GoodsCode, q = needQty }, transaction);
+                        }
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
+
 
     }
 }

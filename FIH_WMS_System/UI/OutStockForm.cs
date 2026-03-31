@@ -41,7 +41,11 @@ namespace FIH_WMS_System.UI
                 { OutboundStrategy.Manual, "Manual-直接人工指定" },
                 { OutboundStrategy.FIFO, "FIFO-先进先出 (防过期)" },
                 { OutboundStrategy.LIFO, "LIFO-后进先出" },
-                { OutboundStrategy.NearestFirst, "NearestFirst-就近原则" }
+                { OutboundStrategy.NearestFirst, "NearestFirst-就近原则" },
+
+                { OutboundStrategy.LeastQuantityFirst, "LeastQty-存量最少优先 (清空碎片)" }, 
+                { OutboundStrategy.MostQuantityFirst, "MostQty-存量充足优先 (减少搬运)" }
+
             };
 
             cmbStrategy.DataSource = new BindingSource(strategyDict, null);

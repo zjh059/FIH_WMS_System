@@ -16,7 +16,10 @@ namespace FIH_WMS_System.Services
         Manual = 1,                 // 直接人工指定库位出库
         FIFO = 2,                   // 采用先进先出原则出库 (First In First Out)
         LIFO = 3,                   // 采用后进先出原则出库 (Last In First Out)
-        NearestFirst = 4            // 采用就近原则出库
+        NearestFirst = 4,           // 采用就近原则出库
+
+        LeastQuantityFirst = 5,     // 存量最少优先 (优先清空物料极少的零星碎片库位)
+        MostQuantityFirst = 6       // 存量充足优先 (集中大批量出库，减少搬运次数)
     }
 
     /// <summary>
@@ -57,7 +60,19 @@ namespace FIH_WMS_System.Services
                     // 就近原则：假设库位编码越小离出口越近 (比如 A-01 优先于 B-01)
                     return availableStocks.OrderBy(s => s.LocationCode).ToList();
 
-                case OutboundStrategy.Manual:
+
+
+                case OutboundStrategy.LeastQuantityFirst:
+                    //按数量从小到大排序。数量越少排越前，优先把快空了的货架搬空
+                    return availableStocks.OrderBy(s => s.Qty).ThenBy(s => s.InStockTime).ToList();
+
+                case OutboundStrategy.MostQuantityFirst:
+                    //按数量从大到小排序。数量越多排越前，适合一次性大批量出库
+                    return availableStocks.OrderByDescending(s => s.Qty).ToList();
+
+
+
+                case OutboundStrategy.Manual://人工排序
                 default:
                     // 人工指定时不进行特定智能排序，保持原样
                     return availableStocks;
