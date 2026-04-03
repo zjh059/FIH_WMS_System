@@ -20,5 +20,9 @@ namespace FIH_WMS_System.Models
         public string Category { get; set; } = string.Empty;// 物料分类
 
         public int SafeQty { get; set; }// 安全库存报警线
+
+        
+        public string Brand { get; set; } = string.Empty;//品牌字段
     }
 }
+

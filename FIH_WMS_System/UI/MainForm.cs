@@ -85,7 +85,7 @@ namespace FIH_WMS_System
                     }
                 }
 
-
+                
 
             }
         }
@@ -227,9 +227,10 @@ namespace FIH_WMS_System
                     Utils.VoiceHelper.Speak("产线工单出库已下发，AGV正在为您备料。");
                     MessageBox.Show("🚀 BOM 智能出库执行成功！相关 AGV 任务已生成。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     uiButton3_Click(null, null); // 刷新表格
-                    return; // 搞定收工，直接退出，不要往下执行老逻辑了
-                }
 
+                    CheckLowStockWarning(); // 👈 【新增】：出库完立刻查水表！
+                    return;
+                }
 
                 // --- 场景 A：人工指定模式 ---
                 if (form.InputStrategy == Services.OutboundStrategy.Manual)
@@ -244,14 +245,15 @@ namespace FIH_WMS_System
                     if (success)
                     {
                         MessageBox.Show("🎉 人工出库成功！数据已更新。", "系统提示");
-                        uiButton3_Click(null, null); // ✅ 成功后刷新表格！
+                        uiButton3_Click(null, null); // 刷新表格
+
+                        CheckLowStockWarning(); // 👈 【新增】：出库完立刻查水表！
                     }
                     else
                     {
                         MessageBox.Show("❌ 出库失败：请检查库位是否存在或库存是否充足！", "系统警告");
                     }
                 }
-
                 // --- 场景 B：智能出库模式 ---
                 else
                 {
@@ -282,7 +284,9 @@ namespace FIH_WMS_System
                         if (success)
                         {
                             MessageBox.Show("🎉 智能出库执行成功！相关 AGV 任务已生成。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            uiButton3_Click(null, null); // ✅ 成功后瞬间刷新表格！
+                            uiButton3_Click(null, null); // 刷新表格
+
+                            CheckLowStockWarning(); // 👈 【新增】：出库完立刻查水表！
                         }
                         else
                         {
@@ -527,5 +531,27 @@ namespace FIH_WMS_System
                 uiButton3_Click(null, null); // 执行完波次后，刷新库存表格
             }
         }
+
+
+
+        // ==========================================
+        // 核心监控：随时查验全仓安全库存！
+        // ==========================================
+        private void CheckLowStockWarning()
+        {
+            if (Program.CurrentRole == "管理员") // 只有管理员才配看到报警并处理采购单
+            {
+                var warnings = wms.GetLowStockWarnings();
+                if (warnings.Count > 0)
+                {
+                    Utils.VoiceHelper.Speak("系统警报：检测到部分物料低于安全库存底线，请立即处理！");
+                    UI.WarningForm warningForm = new UI.WarningForm();
+                    warningForm.ShowDialog();
+                }
+            }
+        }
+
+
+
     }
 }

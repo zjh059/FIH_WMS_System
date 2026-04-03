@@ -214,7 +214,7 @@ namespace FIH_WMS_System.Services
                         if (remain == 0) db.Execute("UPDATE Location SET IsUsed = 0 WHERE Code = @lCode", new { lCode = locCode }, transaction);
 
                         // 👇 【WCS核心：召唤 AGV 小车！】 👇
-                        // 库存扣完后，我们生成一个 AGV 任务指令发给硬件层
+                        // 库存扣完后，生成一个 AGV 任务指令发给硬件层
                         string agvTaskNo = "AGV-" + DateTime.Now.ToString("yyyyMMddHHmmss");
                         db.Execute(@"INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) 
                                      VALUES (@tNo, 1, 0, @gCode, @qty, @fromLoc, '产线接驳口1', GETDATE())",
@@ -1021,50 +1021,46 @@ namespace FIH_WMS_System.Services
         // ==========================================
         public string InStockWithLabel(string goodsCode, int qty, string locationCode)
         {
-            // 引入 Dapper 命名空间 (如果文件顶部没有的话，请确保有 using Dapper; 和 using System.Data.SqlClient;)
-            // using (var db = new System.Data.SqlClient.SqlConnection(connStr))
             using (var db = new SqlConnection(connStr))
             {
-                // 【核心新增：物料安检】严格校验物料编码是否存在！
-                int goodsCount = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Goods WHERE Code = @g", new { g = goodsCode });
-                if (goodsCount == 0) return "ERROR_GOODS"; // 找不到该物料的档案，直接打回！
+                // 1. 物料安检，同时把该物料的详细信息（品牌、分类）查出来，用于生成条码！
+                var goodsInfo = db.QueryFirstOrDefault<Goods>("SELECT * FROM Goods WHERE Code = @g", new { g = goodsCode });
+                if (goodsInfo == null) return "ERROR_GOODS";
 
-                // 【核心新增：库位安检】严格校验库位编码是否存在！
                 int locCount = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Location WHERE Code = @l", new { l = locationCode });
-                if (locCount == 0) return "ERROR_LOCATION"; // 仓库里根本没这个货架，直接打回！
+                if (locCount == 0) return "ERROR_LOCATION";
 
+                // 👇 【核心升级：自定义编码规则引擎】
+                // 规则设定为：[品牌前缀(取前2位)]-[分类前缀(取前2位)]-[物料编码]-[年月日]-[4位流水号]
+                string brandPrefix = string.IsNullOrEmpty(goodsInfo.Brand) ? "XX" : (goodsInfo.Brand.Length >= 2 ? goodsInfo.Brand.Substring(0, 2).ToUpper() : goodsInfo.Brand.ToUpper());
+                string catPrefix = string.IsNullOrEmpty(goodsInfo.Category) ? "XX" : (goodsInfo.Category.Length >= 2 ? goodsInfo.Category.Substring(0, 2).ToUpper() : goodsInfo.Category.ToUpper());
 
+                // 生成最终符合工业溯源标准的 ReelId
+                string reelId = $"{brandPrefix}-{catPrefix}-{goodsCode}-{DateTime.Now.ToString("yyyyMMdd")}-{new Random().Next(1000, 9999)}";
 
-                // 1. 生成符合工业标准的唯一追溯码 ReelId (格式：物料码-年月日-4位随机流水号)
-                string reelId = $"{goodsCode}-{DateTime.Now.ToString("yyyyMMdd")}-{new Random().Next(1000, 9999)}";
                 string batchNo = "BATCH-" + DateTime.Now.ToString("yyyyMMdd");
 
-                // 2. 写入库存表 (Stock)
                 string checkSql = "SELECT Id FROM Stock WHERE GoodsCode = @g AND LocationCode = @l";
                 var stockId = db.QueryFirstOrDefault<int?>(checkSql, new { g = goodsCode, l = locationCode });
 
                 if (stockId != null)
                 {
-                    // 如果库位上已经有同类物料，累加数量，并更新最新的 ReelId 和批次
                     db.Execute("UPDATE Stock SET Qty = Qty + @q, ReelId = @r, BatchNo = @b, InStockTime = GETDATE() WHERE Id = @id",
                         new { q = qty, r = reelId, b = batchNo, id = stockId });
                 }
                 else
                 {
-                    // 如果是空库位，插入全新库存记录
                     db.Execute("INSERT INTO Stock (GoodsCode, LocationCode, Qty, BatchNo, ReelId, InStockTime, FrozenQty) VALUES (@g, @l, @q, @b, @r, GETDATE(), 0)",
                         new { g = goodsCode, l = locationCode, q = qty, b = batchNo, r = reelId });
                 }
 
-                // 3. 写入操作流水账 (StockRecord) - 重点是把 ReelId 记录下来以备追溯！
                 string orderNo = "AUTO-IN-" + DateTime.Now.ToString("HHmmss");
                 db.Execute("INSERT INTO StockRecord (OrderNo, RecordType, GoodsCode, LocationCode, Qty, BatchNo, ReelId, OperateTime, Operator) VALUES (@o, 0, @g, @l, @q, @b, @r, GETDATE(), @op)",
                     new { o = orderNo, g = goodsCode, l = locationCode, q = qty, b = batchNo, r = reelId, op = FIH_WMS_System.Program.CurrentUsername });
 
-                // 4. 将该库位状态标记为“已占用”
                 db.Execute("UPDATE Location SET IsUsed = 1 WHERE Code = @l", new { l = locationCode });
 
-                return reelId; // 入库成功！将刚生成的身份证号返回给界面去打印！
+                return reelId;
             }
         }
 
@@ -1072,29 +1068,52 @@ namespace FIH_WMS_System.Services
         // ==========================================
         // 基础数据管理：获取所有物料档案
         // ==========================================
-        public List<dynamic> GetAllGoods()
+
+        //错误：WinForms 遇上 Dapper dynamic 的底层大坑
+        /*        public List<dynamic> GetAllGoods()
+                {
+                    using (var db = new SqlConnection(connStr))
+                    {
+                        // 按最新的倒序排列，方便刚添加完就能看到
+                        //return db.Query("SELECT Code as 物料编码, Name as 物料名称, Spec as 规格, Category as 分类 FROM Goods ORDER BY Id DESC").ToList();
+
+                        // 👈 SQL 查询中加入了 Brand 字段
+                        return db.Query("SELECT Code as 物料编码, Name as 物料名称, Brand as 品牌, Spec as 规格, Category as 分类, SafeQty as 安全库存线 FROM Goods ORDER BY Id DESC").ToList();
+                    }
+                }*/
+
+        // ==========================================
+        // 基础数据管理：获取所有物料档案 (新增展示品牌)
+        // ==========================================
+        public System.Data.DataTable GetAllGoods() // 此返回值从 List<dynamic> 改为 System.Data.DataTable
         {
-            using (var db = new SqlConnection(connStr))
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
-                // 按最新的倒序排列，方便刚添加完就能看到
-                return db.Query("SELECT Code as 物料编码, Name as 物料名称, Spec as 规格, Category as 分类 FROM Goods ORDER BY Id DESC").ToList();
+                var dt = new System.Data.DataTable();
+
+                // 💡使用 ExecuteReader 获取底层数据流，并直接装载进 DataTable
+                // 这样 WinForms 的表格就能 100% 完美识别列名，再也不会重复拼接了！
+                var reader = db.ExecuteReader("SELECT Code as 物料编码, Name as 物料名称, Brand as 品牌, Spec as 规格, Category as 分类, SafeQty as 安全库存线 FROM Goods ORDER BY Id DESC");
+                dt.Load(reader);
+
+                return dt;
             }
         }
 
         // ==========================================
-        // 基础数据管理：新增物料档案
+        // 基础数据管理：新增物料档案 (支持录入品牌)
         // ==========================================
-        public bool AddNewGoods(string code, string name, string spec, string category)
+        public bool AddNewGoods(string code, string name, string spec, string category, string brand)
         {
-            using (var db = new SqlConnection(connStr))
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
                 // 先查一下，防止编码重复录入
                 int count = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Goods WHERE Code = @c", new { c = code });
                 if (count > 0) return false; // 如果已经存在，直接返回失败
 
-                // 写入新的物料档案
-                db.Execute("INSERT INTO Goods (Code, Name, Spec, Category) VALUES (@c, @n, @s, @cat)",
-                    new { c = code, n = name, s = spec, cat = category });
+                // 写入新的物料档案 (增加了 Brand, SafeQty 默认给0)
+                db.Execute("INSERT INTO Goods (Code, Name, Spec, Category, Brand, SafeQty) VALUES (@c, @n, @s, @cat, @b, 0)",
+                    new { c = code, n = name, s = spec, cat = category, b = brand });
                 return true;
             }
         }
@@ -1285,11 +1304,10 @@ namespace FIH_WMS_System.Services
         // ==========================================
         // 智能预警：查询所有低于安全库存的物料
         // ==========================================
-        public List<dynamic> GetLowStockWarnings()
+        public List<LowStockItem> GetLowStockWarnings() // 👈 这里换成了具体的类
         {
             using (var db = new SqlConnection(connStr))
             {
-                // 使用 SQL 聚合查询：把每个物料的总库存算出来，然后和 SafeQty 对比
                 string sql = @"
                     SELECT 
                         g.Code AS GoodsCode, 
@@ -1299,20 +1317,18 @@ namespace FIH_WMS_System.Services
                     FROM Goods g
                     LEFT JOIN Stock s ON g.Code = s.GoodsCode
                     GROUP BY g.Code, g.Name, g.SafeQty
-                    -- 只筛选出当前总数小于安全库存的物料 (并且安全库存得大于0才报警)
                     HAVING ISNULL(SUM(s.Qty - s.FrozenQty), 0) < g.SafeQty AND g.SafeQty > 0";
 
-                return db.Query(sql).ToList();
+                // 👈 Dapper 强类型映射
+                return db.Query<LowStockItem>(sql).ToList();
             }
         }
-
 
         // ==========================================
         // 智能预警：一键自动生成采购补货单
         // ==========================================
         public bool AutoGeneratePurchaseOrder()
         {
-            // 1. 先查出到底有哪些物料缺货
             var shortageList = GetLowStockWarnings();
             if (shortageList.Count == 0) return false;
 
@@ -1323,24 +1339,21 @@ namespace FIH_WMS_System.Services
                 {
                     try
                     {
-                        // 2. 生成一个宏观的“采购入库单” (OrderType = 0 表示入库)
                         string orderNo = "PUR-" + DateTime.Now.ToString("yyyyMMddHHmmss");
                         db.Execute("INSERT INTO WmsOrder (OrderNo, OrderType, Status, CreateTime) VALUES (@o, 0, 0, GETDATE())",
                                    new { o = orderNo }, transaction);
 
-                        // 3. 遍历所有缺货的物料，把它们塞进这张单子的明细里
                         foreach (var item in shortageList)
                         {
-                            // 计算缺口：安全库存 - 当前真实可用库存
-                            int safeQty = (int)item.SafeQty;
-                            int currentQty = (int)item.CurrentTotalQty;
+                            // 👈 因为有了强类型，这里不再需要 (int) 和 (string) 强制转换了，代码更安全！
+                            int safeQty = item.SafeQty;
+                            int currentQty = item.CurrentTotalQty;
                             int needQty = safeQty - currentQty;
 
                             if (needQty <= 0) continue;
 
-                            // 写入订单明细表 (WmsOrderDetail)
                             db.Execute("INSERT INTO WmsOrderDetail (OrderNo, GoodsCode, PlanQty, ActualQty, Status) VALUES (@o, @g, @q, 0, 0)",
-                                new { o = orderNo, g = (string)item.GoodsCode, q = needQty }, transaction);
+                                new { o = orderNo, g = item.GoodsCode, q = needQty }, transaction);
                         }
 
                         transaction.Commit();
