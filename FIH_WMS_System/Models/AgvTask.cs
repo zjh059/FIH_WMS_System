@@ -4,13 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using SqlSugar;
+
 namespace FIH_WMS_System.Models
 {
     /// <summary>
     /// AGV小车调度任务表 (WCS控制层)
     /// </summary>
+
+    [SugarTable("AgvTask")]  // 告诉系统映射数据库的 AgvTask 表
+
     public class AgvTask
     {
+        // 告诉系统这是主键(IsPrimaryKey)，并且是数据库自动增加的(IsIdentity)
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
         public int Id { get; set; }
         public string TaskNo { get; set; } = string.Empty;
 

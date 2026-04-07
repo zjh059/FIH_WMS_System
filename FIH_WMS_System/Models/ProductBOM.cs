@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using SqlSugar;
+
 //产品BOM表
 //这个类用于告诉系统，组装一个成品需要哪些原材料，以及分别需要多少个。
 namespace FIH_WMS_System.Models
@@ -12,8 +14,13 @@ namespace FIH_WMS_System.Models
     /// 产品物料清单 (BOM) 模型
     /// 用于维护成品与原材料之间的构成关系
     /// </summary>
+
+    [SugarTable("ProductBOM")]  // 告诉系统映射数据库的 ProductBOM 表
     public class ProductBOM
     {
+        // 告诉系统这是主键(IsPrimaryKey)，并且是数据库自动增加的(IsIdentity)
+        // 主键及自增标识
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
         public int Id { get; set; }
 
         /// <summary>

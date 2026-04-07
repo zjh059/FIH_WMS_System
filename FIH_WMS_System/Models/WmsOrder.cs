@@ -4,13 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using SqlSugar;
+
 namespace FIH_WMS_System.Models
 {
     /// <summary>
     /// 出入库单据表（宏观任务指令）
     /// </summary>
+
+    [SugarTable("WmsOrder")]// 告诉系统映射数据库的 WmsOrder 表
     public class WmsOrder
     {
+        // 告诉系统这是主键(IsPrimaryKey)，并且是数据库自动增加的(IsIdentity)
+        // 主键及自增标识
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
         public int Id { get; set; }
         public string OrderNo { get; set; } = string.Empty; // 单据编号
         public int OrderType { get; set; }                  // 0: 入库单, 1: 出库单

@@ -4,14 +4,24 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using SqlSugar;
+
 namespace FIH_WMS_System.Models
 {
     /// <summary>
     /// 库存 模型
     /// 记录当前仓库里每个库位具体存放了什么物料，以及数量和批次信息
     /// </summary>
+    
+    [SugarTable("Stock")]// 告诉系统映射数据库的 Stock 表
+
     public class Stock
     {
+        // 告诉系统这是主键(IsPrimaryKey)，并且是数据库自动增加的(IsIdentity)
+        // 主键及自增标识
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
+
+
         /// <summary>
         /// 主键，数据库自增ID
         /// </summary>

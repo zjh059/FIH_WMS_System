@@ -9,7 +9,7 @@ using Microsoft.Data.SqlClient;
 using Dapper;
 using System.Data.SqlClient;
 
-
+using FIH_WMS_System.Utils; // 【新增】引入DbHelper
 
 namespace FIH_WMS_System.Services
 {
@@ -310,71 +310,96 @@ namespace FIH_WMS_System.Services
         // ==========================================
         //public string GetRecommendLocation(string goodsCode)
         //public string GetRecommendLocation(string goodsCode, InboundStrategy strategy = InboundStrategy.SameMaterialMerge)
+        /*        public string GetRecommendLocation(string goodsCode, int inQty, InboundStrategy strategy, int agvX = 0, int agvY = 0)
+                {
+
+                    *//*            using (var db = new SqlConnection(connStr))
+                                {
+                                    // (1)按未满库位入库（减少碎片）
+                                    // 先去库存表里找找，有没有哪个库位已经放了这个物料了？如果有，我们就推荐跟它放在一起。
+                                    string existLoc = db.ExecuteScalar<string>(
+                                        "SELECT TOP 1 LocationCode FROM Stock WHERE GoodsCode = @gCode",
+                                        new { gCode = goodsCode });
+
+                                    if (!string.IsNullOrEmpty(existLoc))
+                                    {
+                                        return existLoc; // 找到了！直接推荐合并存放
+                                    }
+
+                                    // (2)按空库位入库（不混合存储）
+                                    // 如果这是一个全新的物料，就去 Location 表里找一个完全没人用的空库位 (IsUsed = 0)
+                                    string emptyLoc = db.ExecuteScalar<string>( "SELECT TOP 1 Code FROM Location WHERE IsUsed = 0");
+
+                                    if (!string.IsNullOrEmpty(emptyLoc))
+                                    {
+                                        return emptyLoc; // 找到了一个空闲的新家！
+                                    }
+
+                                    // (3)如果都没找到，说明整个仓库连一个空位都没有了，爆仓了！
+                                    return string.Empty;
+                                }*//*
+
+                    // 如果用户选择了“人工指定”，系统就不用费劲推荐了
+                    if (strategy == InboundStrategy.Manual)
+                    {
+                        return string.Empty;
+                    }
+
+                    using (var db = new SqlConnection(connStr))
+                    {
+                        // 1. 收集情报：查出当前仓库里所有的库位 (给大脑提供地图)
+                        var allLocations = db.Query<Location>("SELECT * FROM Location").ToList();
+
+                        // 2. 收集情报：查出当前仓库里所有非空的库存 (给大脑提供当前战况)
+                        // 只查 Qty > 0 的，如果 Qty 是 0 说明那个库存记录是空的
+                        var currentStocks = db.Query<Stock>("SELECT * FROM Stock WHERE Qty > 0").ToList();
+
+                        // 3. 召唤大脑：实例化我们的入库规则引擎
+                        var engine = new InboundRuleEngine();
+
+                        // 4. 开始计算：把物料、地图、战况、策略 喂给引擎
+                        //Location recommendedLoc = engine.RecommendLocation(goodsCode, allLocations, currentStocks, strategy);
+                        Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy);
+
+                        // 5. 返回结果：如果引擎算出来了，就返回库位编码；否则返回空字符串表示“没找到合适位置”
+                        if (recommendedLoc != null)
+                        {
+                            return recommendedLoc.Code;
+                        }
+                        else
+                        {
+                            return string.Empty; // 比如仓库全满的时候
+                        }
+                    }
+
+
+
+                }*/
+        /// <summary>
+        /// 提供给外部 UI 调用的智能推荐入库库位接口
+        /// </summary>
         public string GetRecommendLocation(string goodsCode, int inQty, InboundStrategy strategy, int agvX = 0, int agvY = 0)
         {
+            // 通过 DbHelper 直接查询数据库里的所有真实库位和当前库存
+            // 这一句等同于底层跑了: SELECT * FROM Location 
+            List<Location> allLocations = DbHelper.Db.Queryable<Location>().ToList();
 
-            /*            using (var db = new SqlConnection(connStr))
-                        {
-                            // (1)按未满库位入库（减少碎片）
-                            // 先去库存表里找找，有没有哪个库位已经放了这个物料了？如果有，我们就推荐跟它放在一起。
-                            string existLoc = db.ExecuteScalar<string>(
-                                "SELECT TOP 1 LocationCode FROM Stock WHERE GoodsCode = @gCode",
-                                new { gCode = goodsCode });
+            // 这一句等同于底层跑了: SELECT * FROM Stock
+            List<Stock> currentStocks = DbHelper.Db.Queryable<Stock>().ToList();
+            // -------------------------------------------------
 
-                            if (!string.IsNullOrEmpty(existLoc))
-                            {
-                                return existLoc; // 找到了！直接推荐合并存放
-                            }
+            // 实例化引擎
+            InboundRuleEngine engine = new InboundRuleEngine();
 
-                            // (2)按空库位入库（不混合存储）
-                            // 如果这是一个全新的物料，就去 Location 表里找一个完全没人用的空库位 (IsUsed = 0)
-                            string emptyLoc = db.ExecuteScalar<string>( "SELECT TOP 1 Code FROM Location WHERE IsUsed = 0");
+            // 扔进大脑进行计算分配！
+            Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy);
 
-                            if (!string.IsNullOrEmpty(emptyLoc))
-                            {
-                                return emptyLoc; // 找到了一个空闲的新家！
-                            }
-
-                            // (3)如果都没找到，说明整个仓库连一个空位都没有了，爆仓了！
-                            return string.Empty;
-                        }*/
-
-            // 如果用户选择了“人工指定”，系统就不用费劲推荐了
-            if (strategy == InboundStrategy.Manual)
-            {
+            if (recommendedLoc != null)
+                return recommendedLoc.Code;
+            else
                 return string.Empty;
-            }
-
-            using (var db = new SqlConnection(connStr))
-            {
-                // 1. 收集情报：查出当前仓库里所有的库位 (给大脑提供地图)
-                var allLocations = db.Query<Location>("SELECT * FROM Location").ToList();
-
-                // 2. 收集情报：查出当前仓库里所有非空的库存 (给大脑提供当前战况)
-                // 只查 Qty > 0 的，如果 Qty 是 0 说明那个库存记录是空的
-                var currentStocks = db.Query<Stock>("SELECT * FROM Stock WHERE Qty > 0").ToList();
-
-                // 3. 召唤大脑：实例化我们的入库规则引擎
-                var engine = new InboundRuleEngine();
-
-                // 4. 开始计算：把物料、地图、战况、策略 喂给引擎
-                //Location recommendedLoc = engine.RecommendLocation(goodsCode, allLocations, currentStocks, strategy);
-                Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy);
-
-                // 5. 返回结果：如果引擎算出来了，就返回库位编码；否则返回空字符串表示“没找到合适位置”
-                if (recommendedLoc != null)
-                {
-                    return recommendedLoc.Code;
-                }
-                else
-                {
-                    return string.Empty; // 比如仓库全满的时候
-                }
-            }
-
-
-
         }
+
 
 
 

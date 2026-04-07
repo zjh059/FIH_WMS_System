@@ -4,14 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using SqlSugar;
+
 namespace FIH_WMS_System.Models
 {
     /// <summary>
     /// 库存操作记录(流水账) 模型
     /// 无论入库、出库、移库、盘点，任何库存数量的变化都要在这里记录一笔
     /// </summary>
+
+    [SugarTable("StockRecord")]  // 告诉系统映射数据库的 StockRecord 表
     public class StockRecord
     {
+        // 告诉系统这是主键(IsPrimaryKey)，并且是数据库自动增加的(IsIdentity)
+        // 主键及自增标识
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
         /// <summary>
         /// 主键，数据库自增ID
         /// </summary>

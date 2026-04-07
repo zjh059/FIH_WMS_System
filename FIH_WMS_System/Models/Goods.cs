@@ -4,14 +4,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using SqlSugar;
+
+
 namespace FIH_WMS_System.Models
 {
 
     /// <summary>
     /// 物料信息表
     /// </summary>
+
+    [SugarTable("Goods")]  // 告诉系统映射数据库的 Goods 表
+
     public class Goods
     {
+        // 告诉系统这是主键(IsPrimaryKey)，并且是数据库自动增加的(IsIdentity)
+        // 主键及自增标识
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
         public int Id { get; set; }
         public string Code { get; set; } = string.Empty;    // 物料编码
         public string Name { get; set; } = string.Empty;    // 名称

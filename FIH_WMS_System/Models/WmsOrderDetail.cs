@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using SqlSugar;
+
 //订单明细表
 //之前我们只有订单的“皮”（WmsOrder 表头），现在加入订单的“瓤”（明细），系统才知道具体要搬什么货。
 namespace FIH_WMS_System.Models
@@ -12,8 +14,13 @@ namespace FIH_WMS_System.Models
     /// 仓储单据明细 模型
     /// 记录每次出库/入库任务的具体物料和数量要求
     /// </summary>
+
+    [SugarTable("WmsOrderDetail")]// 告诉系统映射数据库的 WmsOrderDetail 表
     public class WmsOrderDetail
     {
+        // 告诉系统这是主键(IsPrimaryKey)，并且是数据库自动增加的(IsIdentity)
+        // 主键及自增标识
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
         public int Id { get; set; }
 
         /// <summary>

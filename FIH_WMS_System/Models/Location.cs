@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using System;
+using SqlSugar;
 
 namespace FIH_WMS_System.Models
 {
@@ -12,8 +12,13 @@ namespace FIH_WMS_System.Models
     /// 库位 模型
     /// 库位信息表
     /// </summary>
+
+    [SugarTable("Location")]  // 告诉系统映射数据库的 Location 表
     public class Location
     {
+        // 告诉系统这是主键(IsPrimaryKey)，并且是数据库自动增加的(IsIdentity)
+        // 主键及自增标识
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
         public int Id { get; set; }
 
         /// <summary>
