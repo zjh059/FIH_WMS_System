@@ -24,6 +24,8 @@ namespace FIH_WMS_System.UI
 
         private void AgvMonitorForm_Load(object sender, EventArgs e)
         {
+            //原来 timer1.Interval = 3000; 是写死的，现在我们改成从 Program.cs 里读取配置，这样用户就可以在设置界面自由调整刷新频率了，灵活又人性化！
+            timer1.Interval = Program.AgvRefreshInterval;
             LoadData();
         }
 

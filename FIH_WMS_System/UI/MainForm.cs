@@ -64,30 +64,35 @@ namespace FIH_WMS_System
                 btnBaseData.Enabled = false;
                 btnBaseData.Text = "🚫(⚙️数据管理)";
 
+                btnUserManage.Enabled = false;
+                btnUserManage.Text = "🚫(👥用户管理)";
+
+                btnSysVoiceSetup.Enabled = false;
+                btnSysVoiceSetup.Text = "🚫(🔊语音设置)";
 
                 // （大屏看板 uiButton8 和 2D地图 uiButton9 可以保留看，如果不给看也可以设为 false）
 
 
-                // ==========================================
-                // 【新增】登录时主动扫描安全库存预警！
-                // ==========================================
-                if (Program.CurrentRole == "管理员") // 只给管理员弹警告
-                {
-                    var warnings = wms.GetLowStockWarnings();
-                    if (warnings.Count > 0)
-                    {
-                        // 播放警报语音
-                        Utils.VoiceHelper.Speak("系统警报：检测到部分物料低于安全库存底线，请立即处理！");
-
-                        // 弹出我们刚才写好的预警窗口
-                        UI.WarningForm warningForm = new UI.WarningForm();
-                        warningForm.ShowDialog();
-                    }
-                }
-
-                
-
             }
+
+            // ==========================================
+            // 【新增】登录时主动扫描安全库存预警！
+            // ==========================================
+            if (Program.CurrentRole == "管理员") // 只给管理员弹警告
+            {
+                var warnings = wms.GetLowStockWarnings();
+                if (warnings.Count > 0)
+                {
+                    // 播放警报语音
+                    Utils.VoiceHelper.Speak("系统警报：检测到部分物料低于安全库存底线，请立即处理！");
+
+                    // 弹出我们刚才写好的预警窗口
+                    UI.WarningForm warningForm = new UI.WarningForm();
+                    warningForm.ShowDialog();
+                }
+            }
+
+
         }
         private void btnLogout_Click(object sender, EventArgs e) // 假设你的按钮叫 btnLogout，请以你实际双击出来的名字为准
         {
@@ -303,8 +308,6 @@ namespace FIH_WMS_System
             var rawStock = wms.GetStockList();
 
             // 2. ✨ LINQ showTime
-            // 因为库存对象里包含了物料和库位，直接展示会很难看。
-            // 我们用 Select 重新“包装”一下，变成中文表头
             var displayList = rawStock.Select(s => new
             {
                 库存编号 = s.Id,
@@ -312,20 +315,54 @@ namespace FIH_WMS_System
                 物料名称 = s.Goods?.Name,
                 物料编码 = s.Goods?.Code,
                 所在库位 = s.Location?.Code,
-                库存数量 = s.Qty,
-                批次号 = s.BatchNo,                           // 👈 【新增展示】
-                入库时间 = s.InStockTime.ToString("yyyy-MM-dd") // 👈 【新增展示】
+                实际总数量 = s.Qty,               // 👈 改个名字，方便区分
+                冻结数量 = s.FrozenQty,           // 👈 【新增展示】
+                可用数量 = s.Qty - s.FrozenQty,   // 👈 【新增展示】真实能用的数量！
+                批次号 = s.BatchNo,
+                入库时间 = s.InStockTime.ToString("yyyy-MM-dd")
             }).ToList();
 
             // 3. 把包装好的数据直接给表格控件！
-            dataGridView1.DataSource = null;// 先清空一下，强制刷新
-            dataGridView1.DataSource = displayList;//绑定新数据
-
-            // 让表格根据内容自动调整列宽
-            //dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
-            //强制让所有列按比例撑满整个表格宽度！
+            dataGridView1.DataSource = null;
+            dataGridView1.DataSource = displayList;
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+            // ==========================================
+            // 【新增】：给库存查询表格挂载“右键菜单”
+            // ==========================================
+            ContextMenuStrip stockMenu = new ContextMenuStrip();
+
+            ToolStripMenuItem freezeItem = new ToolStripMenuItem("🔒 冻结该批次库存 (拦截出库)");
+            freezeItem.Click += (s, ev) => {
+                if (dataGridView1.SelectedRows.Count > 0)
+                {
+                    int stockId = Convert.ToInt32(dataGridView1.SelectedRows[0].Cells["库存编号"].Value);
+                    wms.ToggleFreezeStock(stockId, true);
+                    MessageBox.Show("已成功冻结该库存，它将不会被分配给任何出库任务！", "冻结成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    uiButton3_Click(null, null); // 刷新表格
+                }
+            };
+
+            ToolStripMenuItem unfreezeItem = new ToolStripMenuItem("🔓 解除冻结 (恢复可用)");
+            unfreezeItem.Click += (s, ev) => {
+                if (dataGridView1.SelectedRows.Count > 0)
+                {
+                    int stockId = Convert.ToInt32(dataGridView1.SelectedRows[0].Cells["库存编号"].Value);
+                    wms.ToggleFreezeStock(stockId, false);
+                    MessageBox.Show("已解除冻结，恢复正常可用状态！", "解冻成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    uiButton3_Click(null, null); // 刷新表格
+                }
+            };
+
+            stockMenu.Items.Add(freezeItem);
+            stockMenu.Items.Add(unfreezeItem);
+
+            // 把做好的菜单绑定给表格
+            dataGridView1.ContextMenuStrip = stockMenu;
         }
+
+
+
         private void uiButton4_Click(object sender, EventArgs e)
         {
             // 1. 向Models要出入库的流水日志
@@ -359,6 +396,10 @@ namespace FIH_WMS_System
             dataGridView1.Columns["物料名称"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
             dataGridView1.Columns["所在库位"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
             dataGridView1.Columns["变动数量"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+
+
+            // 卸载右键菜单，防止流水和调度界面被干扰
+            dataGridView1.ContextMenuStrip = null;
         }
 
         //🔄 库位移库与碎片整理
@@ -434,6 +475,10 @@ namespace FIH_WMS_System
             dataGridView1.DataSource = null;
             dataGridView1.DataSource = displayList;
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+
+
+            // 卸载右键菜单，防止流水和调度界面被干扰
+            dataGridView1.ContextMenuStrip = null;
         }
 
 
@@ -551,7 +596,18 @@ namespace FIH_WMS_System
             }
         }
 
+        private void btnOrderCenter_Click(object sender, EventArgs e)
+        {
+            new UI.OrderCenterForm().ShowDialog();
+        }
+        private void btnUserManage_Click(object sender, EventArgs e)
+        {
+            new UI.UserManageForm().ShowDialog();
+        }
 
-
+        private void btnSysVoiceSetup_Click(object sender, EventArgs e)
+        {
+            new UI.SettingsForm().ShowDialog();
+        }
     }
 }

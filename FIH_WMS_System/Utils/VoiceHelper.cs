@@ -16,13 +16,17 @@ namespace FIH_WMS_System.Utils
         // 静态方法，随时随地直接调用
         public static void Speak(string text)
         {
+            //【新增】：如果管理员关闭了语音播报，直接返回，保持静音！
+            if (!Program.EnableVoiceBroadcast) return;
+
             // 使用 Task.Run 把它丢到后台线程去读，这样就不会卡住 MessageBox 弹窗了
             Task.Run(() =>
             {
                 try
                 {
                     // 召唤微软内置的语音合成器
-                    using (SpeechSynthesizer synth = new SpeechSynthesizer())
+                    //using (SpeechSynthesizer synth = new SpeechSynthesizer())
+                    using (System.Speech.Synthesis.SpeechSynthesizer synth = new System.Speech.Synthesis.SpeechSynthesizer())
                     {
                         // 设置为系统的默认音频输出设备（你的音箱或耳机）
                         synth.SetOutputToDefaultAudioDevice();

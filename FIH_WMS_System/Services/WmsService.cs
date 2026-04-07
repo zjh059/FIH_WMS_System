@@ -1369,6 +1369,133 @@ namespace FIH_WMS_System.Services
         }
 
 
+        // ==========================================
+        // 宏观单据流转：获取主单据列表 (WmsOrder)
+        // ==========================================
+        public System.Data.DataTable GetAllOrders()
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                var dt = new System.Data.DataTable();
+                string sql = @"
+                    SELECT 
+                        OrderNo AS 单据编号, 
+                        CASE OrderType WHEN 0 THEN N'📥 入库单/采购补单' ELSE N'📤 出库单/生产领料单' END AS 单据类型, 
+                        CASE Status WHEN 0 THEN N'⏳ 待处理' WHEN 1 THEN N'🚀 执行中' ELSE N'✅ 已完成' END AS 单据状态,
+                        CreateTime AS 创建时间 
+                    FROM WmsOrder 
+                    ORDER BY CreateTime DESC";
+
+                var reader = db.ExecuteReader(sql);
+                dt.Load(reader);
+                return dt;
+            }
+        }
+
+        // ==========================================
+        // 宏观单据流转：获取单据物料明细 (WmsOrderDetail)
+        // ==========================================
+        public System.Data.DataTable GetOrderDetails(string orderNo)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                var dt = new System.Data.DataTable();
+                string sql = @"
+                    SELECT 
+                        d.GoodsCode AS 物料编码, 
+                        g.Name AS 物料名称, 
+                        g.Brand AS 品牌,
+                        d.PlanQty AS 计划数量, 
+                        d.ActualQty AS 实际完成数量, 
+                        CASE d.Status WHEN 0 THEN '待处理' WHEN 1 THEN '部分完成' ELSE '已完成' END AS 明细状态 
+                    FROM WmsOrderDetail d 
+                    LEFT JOIN Goods g ON d.GoodsCode = g.Code 
+                    WHERE d.OrderNo = @o";
+
+                var reader = db.ExecuteReader(sql, new { o = orderNo });
+                dt.Load(reader);
+                return dt;
+            }
+        }
+
+
+        // ==========================================
+        // 用户权限管理：获取所有账号
+        // ==========================================
+        public System.Data.DataTable GetAllUsers()
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                var dt = new System.Data.DataTable();
+                // 密码是隐私，不能在表格里直接展示出来！
+                var reader = db.ExecuteReader("SELECT Id AS 用户编号, Username AS 登录账号, Role AS 角色权限 FROM Users ORDER BY Id");
+                dt.Load(reader);
+                return dt;
+            }
+        }
+
+        // ==========================================
+        // 用户权限管理：新增账号
+        // ==========================================
+        public bool AddUser(string username, string password, string role)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                // 检查账号是否已存在
+                int count = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Users WHERE Username = @u", new { u = username });
+                if (count > 0) return false;
+
+                db.Execute("INSERT INTO Users (Username, Password, Role) VALUES (@u, @p, @r)",
+                    new { u = username, p = password, r = role });
+                return true;
+            }
+        }
+
+        // ==========================================
+        // 用户权限管理：重置密码
+        // ==========================================
+        public void ResetPassword(int userId, string newPassword)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Execute("UPDATE Users SET Password = @p WHERE Id = @id", new { p = newPassword, id = userId });
+            }
+        }
+
+        // ==========================================
+        // 用户权限管理：删除账号
+        // ==========================================
+        public void DeleteUser(int userId)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Execute("DELETE FROM Users WHERE Id = @id", new { id = userId });
+            }
+        }
+
+
+        // ==========================================
+        // 库存管理：冻结 / 解除冻结
+        // ==========================================
+        public bool ToggleFreezeStock(int stockId, bool isFreeze)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                if (isFreeze)
+                {
+                    // 🔒 全数冻结（把可用数量全部变为冻结状态）
+                    db.Execute("UPDATE Stock SET FrozenQty = Qty WHERE Id = @id", new { id = stockId });
+                }
+                else
+                {
+                    // 🔓 解除冻结（冻结数量清零）
+                    db.Execute("UPDATE Stock SET FrozenQty = 0 WHERE Id = @id", new { id = stockId });
+                }
+                return true;
+            }
+        }
+
+
 
     }
 }

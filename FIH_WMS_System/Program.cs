@@ -13,6 +13,10 @@ namespace FIH_WMS_System
         public static string CurrentUsername = "";
         public static string CurrentRole = "";
 
+        // 【新增】：全局系统参数
+        public static bool EnableVoiceBroadcast = true; // 语音播报开关 (默认开启)
+        public static int AgvRefreshInterval = 3000;    // AGV监控台刷新频率 (毫秒)
+
         [STAThread]
         static void Main()
         {
