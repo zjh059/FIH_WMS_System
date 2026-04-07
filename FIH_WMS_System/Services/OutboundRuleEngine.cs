@@ -34,7 +34,11 @@ namespace FIH_WMS_System.Services
         /// <param name="currentStocks">当前系统中的所有可用库存</param>
         /// <param name="strategy">出库策略</param>
         /// <returns>按照优先级排好序的库存列表 (排在越前面的越应该先出库)</returns>
-        public List<Stock> RecommendOutboundStocks(string goodsCode, List<Stock> currentStocks, OutboundStrategy strategy)
+        
+
+        //public List<Stock> RecommendOutboundStocks(string goodsCode, List<Stock> currentStocks, OutboundStrategy strategy)
+        //加入了可选参数 allLocations(库位列表) 以及 targetX, targetY (产线 / 交接点坐标)
+        public List<Stock> RecommendOutboundStocks(string goodsCode, List<Stock> currentStocks, OutboundStrategy strategy, List<Location> allLocations = null, int targetX = 0, int targetY = 0)
         {
             // 1. 先过滤出含有该物料，且实际可用数量大于0的库存 (Qty - FrozenQty 是真实可用的)
             var availableStocks = currentStocks
@@ -50,7 +54,9 @@ namespace FIH_WMS_System.Services
                     // 先进先出：入库时间越早的，排在越前面
                     //return availableStocks.OrderBy(s => s.InStockTime).ToList();
                     // 先进先出：入库时间越早的排前面。如果时间一样，优先出数量少的（清空碎片货架）
-                    return availableStocks.OrderBy(s => s.InStockTime).ThenBy(s => s.Qty).ToList();
+                    //return availableStocks.OrderBy(s => s.InStockTime).ThenBy(s => s.Qty).ToList();
+                    //优先看生产日期(FEFO防过期机制)，没生产日期的再看入库时间。
+                    return availableStocks.OrderBy(s => s.ProduceDate ?? s.InStockTime).ThenBy(s => s.Qty).ToList();
 
                 case OutboundStrategy.LIFO:
                     // 后进先出：入库时间越晚的，排在越前面
@@ -58,6 +64,17 @@ namespace FIH_WMS_System.Services
 
                 case OutboundStrategy.NearestFirst:
                     // 就近原则：假设库位编码越小离出口越近 (比如 A-01 优先于 B-01)
+                    //return availableStocks.OrderBy(s => s.LocationCode).ToList();
+                    // 就近原则：如果提供了库位坐标，则计算距离，距离近的排前面；否则按库位编码排序
+                    //如果有传入库位表，计算物理真实坐标；否则退化为原来的按字符串编码排序
+                    if (allLocations != null && allLocations.Any())
+                    {
+                        return availableStocks
+                            .Join(allLocations, s => s.LocationCode, l => l.Code, (s, l) => new { Stock = s, Loc = l })
+                            .OrderBy(x => Math.Pow(x.Loc.PosX - targetX, 2) + Math.Pow(x.Loc.PosY - targetY, 2))
+                            .Select(x => x.Stock)
+                            .ToList();
+                    }
                     return availableStocks.OrderBy(s => s.LocationCode).ToList();
 
 
@@ -78,5 +95,8 @@ namespace FIH_WMS_System.Services
                     return availableStocks;
             }
         }
+
+
+
     }
 }

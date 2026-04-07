@@ -72,11 +72,16 @@ namespace FIH_WMS_System.UI
                 }
 
                 // 👇 【核心改动：触发智能分配】
-                // 如果用户偷懒没填库位，我们就召唤 WmsService 帮他找！
+                // 如果用户偷懒没填库位，就用 WmsService 帮他找！
                 if (string.IsNullOrEmpty(InputLocCode))
                 {
                     Services.WmsService wms = new Services.WmsService();
-                    string autoLoc = wms.GetRecommendLocation(InputGoodsCode);
+                    //string autoLoc = wms.GetRecommendLocation(InputGoodsCode);
+
+                    //去下拉框抓取当前选中的入库策略
+                    InboundStrategy currentStrategy = (InboundStrategy)cmbStrategy.SelectedValue;
+                    // 【修改】：把 InputGoodsCode(物料)、InputQty(数量)、currentStrategy(策略) 一起传给大脑防爆仓！
+                    string autoLoc = wms.GetRecommendLocation(InputGoodsCode, InputQty, currentStrategy);
 
                     if (string.IsNullOrEmpty(autoLoc))
                     {
@@ -150,7 +155,13 @@ namespace FIH_WMS_System.UI
             InboundStrategy selectedStrategy = (InboundStrategy)cmbStrategy.SelectedValue;
 
             // 召唤服务层的大脑
-            string recommendLoc = wmsService.GetRecommendLocation(goodsCode, selectedStrategy);
+            //string recommendLoc = wmsService.GetRecommendLocation(goodsCode, selectedStrategy);
+
+            // 【新增】：尝试读取当前界面的数量。如果还没填(比如扫码枪刚扫完)，就默认为0(仅去探测寻找库位)。
+            int currentQty = 0;
+            int.TryParse(txtQty.Text.Trim(), out currentQty);
+            // 召唤服务层的大脑 【修改】：把 currentQty(入库数量) 也传进去！
+            string recommendLoc = wmsService.GetRecommendLocation(goodsCode, currentQty, selectedStrategy);
 
             if (!string.IsNullOrEmpty(recommendLoc))
             {

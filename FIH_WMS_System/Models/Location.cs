@@ -36,5 +36,10 @@ namespace FIH_WMS_System.Models
         /// 0:正常空闲, 1:已被占用(部分或全部), 2:被锁定(如正在盘点), 3:停用(如货架损坏维修)
         /// </summary>
         public int Status { get; set; } = 0;
+
+
+        public int PosX { get; set; }
+        public int PosY { get; set; }
+        public int MaxCapacity { get; set; }
     }
 }

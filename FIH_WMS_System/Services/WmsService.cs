@@ -309,7 +309,8 @@ namespace FIH_WMS_System.Services
         //WmsService 的代码几乎不用动，此为高内聚低耦合
         // ==========================================
         //public string GetRecommendLocation(string goodsCode)
-        public string GetRecommendLocation(string goodsCode, InboundStrategy strategy = InboundStrategy.SameMaterialMerge)
+        //public string GetRecommendLocation(string goodsCode, InboundStrategy strategy = InboundStrategy.SameMaterialMerge)
+        public string GetRecommendLocation(string goodsCode, int inQty, InboundStrategy strategy, int agvX = 0, int agvY = 0)
         {
 
             /*            using (var db = new SqlConnection(connStr))
@@ -357,7 +358,8 @@ namespace FIH_WMS_System.Services
                 var engine = new InboundRuleEngine();
 
                 // 4. 开始计算：把物料、地图、战况、策略 喂给引擎
-                Location recommendedLoc = engine.RecommendLocation(goodsCode, allLocations, currentStocks, strategy);
+                //Location recommendedLoc = engine.RecommendLocation(goodsCode, allLocations, currentStocks, strategy);
+                Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy);
 
                 // 5. 返回结果：如果引擎算出来了，就返回库位编码；否则返回空字符串表示“没找到合适位置”
                 if (recommendedLoc != null)

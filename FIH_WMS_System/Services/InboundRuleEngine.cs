@@ -51,7 +51,11 @@ namespace FIH_WMS_System.Services
         /// <param name="currentStocks">系统中当前的实时库存列表</param>
         /// <param name="strategy">选择的分配策略</param>
         /// <returns>推荐的库位对象，如果没有可用库位则返回 null</returns>
-        public Location RecommendLocation(string goodsCode, List<Location> allLocations, List<Stock> currentStocks, InboundStrategy strategy)
+        /// <summary>
+        /// 核心方法：智能推荐入库库位
+        /// </summary>
+        //  增加 inQty, agvX, agvY 三个参数
+        public Location RecommendLocation(string goodsCode, int inQty, int agvX, int agvY, List<Location> allLocations, List<Stock> currentStocks, InboundStrategy strategy)
         {
             // 第一步：过滤出所有“状态正常”的库位 (Status == 0 表示正常空闲/可用，排除被锁定或停用的库位)
             // 兼容原有 IsUsed 字段的逻辑
@@ -62,14 +66,18 @@ namespace FIH_WMS_System.Services
             switch (strategy)
             {
                 case InboundStrategy.SameMaterialMerge:
-                    return GetSameMaterialMergeLocation(goodsCode, validLocations, currentStocks)
+                    // 【修改此处】：传入 inQty
+                    //return GetSameMaterialMergeLocation(goodsCode, validLocations, currentStocks)
+                    return GetSameMaterialMergeLocation(goodsCode, inQty, validLocations, currentStocks)
                            ?? GetEmptyLocation(validLocations, currentStocks); // 如果找不到同类物料库位，就退化为找空库位
 
                 case InboundStrategy.EmptyLocationFirst:
                     return GetEmptyLocation(validLocations, currentStocks);
 
                 case InboundStrategy.NearestFirst:
-                    return GetNearestLocation(validLocations, currentStocks);
+                    // 【修改此处】：传入 agvX, agvY
+                    //return GetNearestLocation(validLocations, currentStocks);
+                    return GetNearestLocation(agvX, agvY, validLocations, currentStocks);
 
                 case InboundStrategy.Manual:
                 default:
@@ -80,7 +88,7 @@ namespace FIH_WMS_System.Services
         /// <summary>
         /// 策略 A：找含有相同物料的库位合并 (减少碎片)
         /// </summary>
-        private Location GetSameMaterialMergeLocation(string goodsCode, List<Location> validLocations, List<Stock> currentStocks)
+        private Location GetSameMaterialMergeLocation(string goodsCode, int inQty, List<Location> validLocations, List<Stock> currentStocks) //增加 inQty 参数
         {
             // 找出存放了该物料的所有库存记录
             var existingStocks = currentStocks.Where(s => s.GoodsCode == goodsCode && s.Qty > 0).ToList();
@@ -89,20 +97,25 @@ namespace FIH_WMS_System.Services
             var occupiedLocationCodes = existingStocks.Select(s => s.LocationCode).Distinct().ToList();
 
             // 在有效库位中，找到这些已经被该物料占用的库位
-            var mergeTarget = validLocations.FirstOrDefault(loc => occupiedLocationCodes.Contains(loc.Code));
+            //var mergeTarget = validLocations.FirstOrDefault(loc => occupiedLocationCodes.Contains(loc.Code));
+            // 【修改此处】：增加防爆仓判断 -> 该库位当前总存量 + 本次放入的数量 <= 最大容量
+            var mergeTarget = validLocations.FirstOrDefault(loc =>
+                occupiedLocationCodes.Contains(loc.Code) &&
+                (currentStocks.Where(s => s.LocationCode == loc.Code).Sum(s => s.Qty) + inQty) <= loc.MaxCapacity);
             return mergeTarget;
         }
 
         /// <summary>
         /// 策略 B：找一个完全为空的库位
         /// </summary>
+        /// 增加防爆仓逻辑
         private Location GetEmptyLocation(List<Location> validLocations, List<Stock> currentStocks)
         {
             // 提取所有有库存的库位编码 (不管是哪种物料，只要数量大于0就算被占用)
             var occupiedLocationCodes = currentStocks.Where(s => s.Qty > 0).Select(s => s.LocationCode).Distinct().ToList();
 
             // 在有效库位中，排除掉被占用的，返回第一个纯空的库位
-            // (这里可以配合 IsUsed 字段，为了严谨，我们从库存反查真实空库位)
+            // (这里可以配合 IsUsed 字段，严谨从库存反查真实空库位)
             var emptyLocation = validLocations.FirstOrDefault(loc => !occupiedLocationCodes.Contains(loc.Code));
             return emptyLocation;
         }
@@ -111,14 +124,20 @@ namespace FIH_WMS_System.Services
         /// 策略 C：按就近原则入库
         /// 假设：库位编码(如 A-01-01)按字母数字顺序排序，越靠前的离入口越近
         /// </summary>
-        private Location GetNearestLocation(List<Location> validLocations, List<Stock> currentStocks)
+        /// 升级为真实的2D坐标距离
+        /// 增加 agvX, agvY 参数
+        private Location GetNearestLocation(int agvX, int agvY, List<Location> validLocations, List<Stock> currentStocks)
         {
             // 先找出所有的纯空库位
             var occupiedLocationCodes = currentStocks.Where(s => s.Qty > 0).Select(s => s.LocationCode).Distinct().ToList();
             var emptyLocations = validLocations.Where(loc => !occupiedLocationCodes.Contains(loc.Code)).ToList();
 
             // 按编码升序排列 (比如 A-01-01 优先于 B-01-01)，取最前面的一个
-            var nearestLocation = emptyLocations.OrderBy(loc => loc.Code).FirstOrDefault();
+            //var nearestLocation = emptyLocations.OrderBy(loc => loc.Code).FirstOrDefault();
+            // 【修改此处】：利用勾股定理计算目标库位(PosX, PosY)与AGV当前坐标的直线距离平方，取最小的一个
+            var nearestLocation = emptyLocations
+                .OrderBy(loc => Math.Pow(loc.PosX - agvX, 2) + Math.Pow(loc.PosY - agvY, 2))
+                .FirstOrDefault();
             return nearestLocation;
         }
     }
