@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 using Microsoft.Data.SqlClient;
 using Dapper;
-using System.Data.SqlClient;
 
 using FIH_WMS_System.Utils; // 【新增】引入DbHelper
 
@@ -380,24 +379,34 @@ namespace FIH_WMS_System.Services
         /// </summary>
         public string GetRecommendLocation(string goodsCode, int inQty, InboundStrategy strategy, int agvX = 0, int agvY = 0)
         {
-            // 通过 DbHelper 直接查询数据库里的所有真实库位和当前库存
-            // 这一句等同于底层跑了: SELECT * FROM Location 
-            List<Location> allLocations = DbHelper.Db.Queryable<Location>().ToList();
-
-            // 这一句等同于底层跑了: SELECT * FROM Stock
-            List<Stock> currentStocks = DbHelper.Db.Queryable<Stock>().ToList();
-            // -------------------------------------------------
-
-            // 实例化引擎
-            InboundRuleEngine engine = new InboundRuleEngine();
-
-            // 扔进大脑进行计算分配！
-            Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy);
-
-            if (recommendedLoc != null)
-                return recommendedLoc.Code;
-            else
+            // 1. 如果用户选择了“人工指定”，系统就不用连数据库了
+            if (strategy == InboundStrategy.Manual)
+            {
                 return string.Empty;
+            }
+
+            try
+            {
+                // 2. 利用 DbHelper 直接从数据库抓取真实货架和库存数据
+                List<Location> allLocations = DbHelper.Db.Queryable<Location>().ToList();
+                List<Stock> currentStocks = DbHelper.Db.Queryable<Stock>().Where(s => s.Qty > 0).ToList();
+
+                // 3. 召唤大脑：实例化入库规则引擎
+                InboundRuleEngine engine = new InboundRuleEngine();
+
+                // 4. 开始计算分配
+                Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy);
+
+                if (recommendedLoc != null)
+                    return recommendedLoc.Code;
+                else
+                    return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show("数据库连接失败：" + ex.Message, "系统错误", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return string.Empty;
+            }
         }
 
 

@@ -41,6 +41,7 @@ namespace FIH_WMS_System.Models
         public DateTime? FinishTime { get; set; }           //指令完成时间
 
         // 导航属性：方便在界面上显示物料的中文名
+        [SugarColumn(IsIgnore = true)]
         public Goods? Goods { get; set; }
     }
 }

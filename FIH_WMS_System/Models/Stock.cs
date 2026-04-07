@@ -36,11 +36,13 @@ namespace FIH_WMS_System.Models
         /// 物料实体对象 (导航属性)
         /// 保留原有的设计，方便在 Services/UI 层直接调用 Stock.Goods.Name
         /// </summary>
+        [SugarColumn(IsIgnore = true)]
         public Goods? Goods { get; set; }
 
         /// <summary>
         /// 库位编码 (与数据库交互的实际存储字段)
         /// </summary>
+        [SugarColumn(IsIgnore = true)]
         public string LocationCode { get; set; }
 
         /// <summary>
