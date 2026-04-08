@@ -42,13 +42,13 @@ namespace FIH_WMS_System.Models
         /// <summary>
         /// 库位编码 (与数据库交互的实际存储字段)
         /// </summary>
-        [SugarColumn(IsIgnore = true)]
         public string LocationCode { get; set; }
 
         /// <summary>
         /// 库位实体对象 (导航属性)
         /// 保留原有的设计，方便直接获取库位所在区域等信息
         /// </summary>
+        [SugarColumn(IsIgnore = true)]
         public Location? Location { get; set; }
 
         /// <summary>

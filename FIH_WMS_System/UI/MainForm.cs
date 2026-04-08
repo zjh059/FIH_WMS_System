@@ -327,6 +327,14 @@ namespace FIH_WMS_System
             dataGridView1.DataSource = displayList;
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
+
+            // 加滑条
+            // 让表格根据内容自动撑开，塞不下就出横向滚动条！
+            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            // 卸载右键菜单，防止流水和调度界面被干扰
+            dataGridView1.ContextMenuStrip = null;
+
+
             // ==========================================
             // 【新增】：给库存查询表格挂载“右键菜单”
             // ==========================================
@@ -387,6 +395,14 @@ namespace FIH_WMS_System
             // 3. 喂给同一个表格
             dataGridView1.DataSource = null;
             dataGridView1.DataSource = displayList;
+
+
+            // 加滑条
+            // 让表格根据内容自动撑开，塞不下就出横向滚动条！
+            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            // 卸载右键菜单，防止流水和调度界面被干扰
+            dataGridView1.ContextMenuStrip = null;
+
 
             // 👇 这句赋予“操作时间”列特权，让它根据里面的字数自动撑开！
             dataGridView1.Columns["操作时间"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;

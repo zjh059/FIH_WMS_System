@@ -60,12 +60,12 @@ namespace FIH_WMS_System.Models
         /// <summary>
         /// 操作涉及的库位编码
         /// </summary>
-        [SugarColumn(IsIgnore = true)]
         public string LocationCode { get; set; }
 
         /// <summary>
         /// 库位实体对象 (导航属性，方便UI显示)
         /// </summary>
+        [SugarColumn(IsIgnore = true)]
         public Location? Location { get; set; }
 
         /// <summary>
