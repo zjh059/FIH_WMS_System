@@ -22,6 +22,8 @@ namespace FIH_WMS_System.UI
     {
         private WmsService wmsService = new WmsService();
 
+        public DateTime? InputProduceDate { get; set; }
+
         public InStockForm()
         {
             InitializeComponent();
@@ -63,6 +65,16 @@ namespace FIH_WMS_System.UI
                 InputGoodsCode = txtGoodsCode.Text.Trim();
                 InputLocCode = txtLocCode.Text.Trim();
                 InputQty = int.Parse(txtQty.Text);
+
+                //新增：如果勾选了生产日期，就把日期装进口袋，否则给 null
+                if (dtpProduceDate.Checked)
+                {
+                    InputProduceDate = dtpProduceDate.Value.Date;
+                }
+                else
+                {
+                    InputProduceDate = null;
+                }
 
                 // 校验必填项
                 if (string.IsNullOrEmpty(InputGoodsCode))

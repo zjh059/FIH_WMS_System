@@ -38,6 +38,8 @@
             label4 = new Label();
             cmbStrategy = new ComboBox();
             btnRecommend = new Button();
+            lblProduceDate = new Label();
+            dtpProduceDate = new DateTimePicker();
             SuspendLayout();
             // 
             // label1
@@ -84,7 +86,7 @@
             // 
             // btnConfirm
             // 
-            btnConfirm.Location = new Point(552, 376);
+            btnConfirm.Location = new Point(552, 463);
             btnConfirm.Name = "btnConfirm";
             btnConfirm.Size = new Size(220, 40);
             btnConfirm.TabIndex = 5;
@@ -119,7 +121,7 @@
             // 
             // btnRecommend
             // 
-            btnRecommend.Location = new Point(46, 376);
+            btnRecommend.Location = new Point(46, 463);
             btnRecommend.Name = "btnRecommend";
             btnRecommend.Size = new Size(144, 40);
             btnRecommend.TabIndex = 9;
@@ -127,11 +129,29 @@
             btnRecommend.UseVisualStyleBackColor = true;
             btnRecommend.Click += btnRecommend_Click;
             // 
+            // lblProduceDate
+            // 
+            lblProduceDate.AutoSize = true;
+            lblProduceDate.Location = new Point(46, 357);
+            lblProduceDate.Name = "lblProduceDate";
+            lblProduceDate.Size = new Size(173, 28);
+            lblProduceDate.TabIndex = 10;
+            lblProduceDate.Text = "生产日期(选填)：";
+            // 
+            // dtpProduceDate
+            // 
+            dtpProduceDate.Checked = false;
+            dtpProduceDate.Location = new Point(254, 352);
+            dtpProduceDate.Name = "dtpProduceDate";
+            dtpProduceDate.ShowCheckBox = true;
+            dtpProduceDate.Size = new Size(518, 34);
+            dtpProduceDate.TabIndex = 11;
+            // 
             // InStockForm
             // 
             AutoScaleDimensions = new SizeF(13F, 28F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(815, 474);
+            ClientSize = new Size(815, 574);
             Controls.Add(btnRecommend);
             Controls.Add(cmbStrategy);
             Controls.Add(label4);
@@ -142,6 +162,8 @@
             Controls.Add(txtGoodsCode);
             Controls.Add(label2);
             Controls.Add(label1);
+            Controls.Add(lblProduceDate);
+            Controls.Add(dtpProduceDate);
             Name = "InStockForm";
             Text = "InStockForm";
             Load += InStockForm_Load;
@@ -161,5 +183,9 @@
         private Label label4;
         private ComboBox cmbStrategy;
         private Button btnRecommend;
+
+
+        private System.Windows.Forms.Label lblProduceDate;
+        private System.Windows.Forms.DateTimePicker dtpProduceDate;
     }
 }

@@ -49,8 +49,15 @@ namespace FIH_WMS_System.UI
                 return;
             }
 
-            // 👇 真正地把 brand 参数传给大脑！
-            bool success = wms.AddNewGoods(code, name, spec, category, brand);
+            //真正地把 brand 参数传给大脑！
+            //bool success = wms.AddNewGoods(code, name, spec, category, brand);
+
+            // 提取用户输入的保质期（如果填了乱码或没填，默认当 0 处理）
+            int shelfLife = 0;
+            int.TryParse(txtShelfLife.Text.Trim(), out shelfLife);
+
+            //真正地把 brand 和 shelfLife 这第 6 个参数传给大脑
+            bool success = wms.AddNewGoods(code, name, spec, category, brand, shelfLife);
 
             if (success)
             {

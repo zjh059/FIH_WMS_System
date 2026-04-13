@@ -141,7 +141,11 @@ namespace FIH_WMS_System
             if (form.ShowDialog() == DialogResult.OK)
             {
                 // 2. 智能入库引擎，获取系统颁发的“身份证号(ReelId)”
-                string generatedReelId = wms.InStockWithLabel(form.InputGoodsCode, form.InputQty, form.InputLocCode);
+                //string generatedReelId = wms.InStockWithLabel(form.InputGoodsCode, form.InputQty, form.InputLocCode);
+
+                // 把 form.InputProduceDate 加到参数列表的最后面
+                string generatedReelId = wms.InStockWithLabel(form.InputGoodsCode, form.InputQty, form.InputLocCode, form.InputProduceDate);
+
 
                 // 【核心新增：精准的错误弹窗拦截】
                 if (generatedReelId == "ERROR_GOODS")

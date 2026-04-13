@@ -84,6 +84,30 @@
             tabPage1.TabIndex = 0;
             tabPage1.Text = "📦 物料基础档案";
             tabPage1.UseVisualStyleBackColor = true;
+
+
+            // 初始化这两个控件
+            this.lblShelfLife = new System.Windows.Forms.Label();
+            this.txtShelfLife = new System.Windows.Forms.TextBox();
+
+            // 设置“保质期”标签
+            this.lblShelfLife.Location = new System.Drawing.Point(780, 105);
+            this.lblShelfLife.Name = "lblShelfLife";
+            this.lblShelfLife.Size = new System.Drawing.Size(125, 35);
+            this.lblShelfLife.Text = "保质期(天):";
+
+            // 设置“保质期”输入框 (默认填 0 代表无保质期)
+            this.txtShelfLife.Location = new System.Drawing.Point(907, 102);
+            this.txtShelfLife.Name = "txtShelfLife";
+            this.txtShelfLife.Size = new System.Drawing.Size(250, 40);
+            this.txtShelfLife.Text = "0";
+
+            // 把它们塞进 tabPage1 里面
+            this.tabPage1.Controls.Add(this.lblShelfLife);
+            this.tabPage1.Controls.Add(this.txtShelfLife);
+
+
+
             // 
             // dgvData
             // 
@@ -336,5 +360,8 @@
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.DataGridView dgvBom;
         private System.Windows.Forms.Label label9;
+
+        private System.Windows.Forms.Label lblShelfLife;
+        private System.Windows.Forms.TextBox txtShelfLife;  
     }
 }
