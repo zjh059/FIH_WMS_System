@@ -32,6 +32,8 @@ namespace FIH_WMS_System.Models
 
         
         public string Brand { get; set; } = string.Empty;//品牌字段
+
+        public int ShelfLifeDays { get; set; }//新增：保质期(天数)。0代表无保质期限制
     }
 }
 

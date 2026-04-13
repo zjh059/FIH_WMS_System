@@ -738,10 +738,29 @@ namespace FIH_WMS_System.Services
         // ==========================================
         public List<Stock> GetOutboundPickAdvice(string goodsCode, int requiredQty, OutboundStrategy strategy = OutboundStrategy.FIFO)
         {
-            using (var db = new SqlConnection(connStr))
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
                 // 1. 获取所有非空库存
-                var currentStocks = db.Query<Stock>("SELECT * FROM Stock WHERE Qty > 0").ToList();
+                //var currentStocks = db.Query<Stock>("SELECT * FROM Stock WHERE Qty > 0").ToList();
+
+
+
+                //(为智能大脑提供保质期数据)
+
+                //核心修复：不能只查 Stock 表，必须连表查出 Goods 的 ShelfLifeDays！
+                string sql = @"
+                    SELECT s.*, g.Id, g.Code, g.Name, g.ShelfLifeDays 
+                    FROM Stock s 
+                    INNER JOIN Goods g ON s.GoodsCode = g.Code 
+                    WHERE s.Qty > 0";
+
+                // Dapper 强类型一对多映射
+                var currentStocks = db.Query<Stock, Goods, Stock>(sql, (stock, goods) =>
+                {
+                    stock.Goods = goods;
+                    return stock;
+                }, splitOn: "Id").ToList();
+
 
                 // 2. 召唤出库大脑进行优先级排序
                 var engine = new OutboundRuleEngine();
@@ -1055,9 +1074,10 @@ namespace FIH_WMS_System.Services
         // ==========================================
         // 智能制造：贴标入库 (自动生成并记录 ReelId)
         // ==========================================
-        public string InStockWithLabel(string goodsCode, int qty, string locationCode)
+        //参数增加 produceDate，选填
+        public string InStockWithLabel(string goodsCode, int qty, string locationCode, DateTime? produceDate = null)
         {
-            using (var db = new SqlConnection(connStr))
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
                 // 1. 物料安检，同时把该物料的详细信息（品牌、分类）查出来，用于生成条码！
                 var goodsInfo = db.QueryFirstOrDefault<Goods>("SELECT * FROM Goods WHERE Code = @g", new { g = goodsCode });
@@ -1077,18 +1097,29 @@ namespace FIH_WMS_System.Services
                 string batchNo = "BATCH-" + DateTime.Now.ToString("yyyyMMdd");
 
                 string checkSql = "SELECT Id FROM Stock WHERE GoodsCode = @g AND LocationCode = @l";
-                var stockId = db.QueryFirstOrDefault<int?>(checkSql, new { g = goodsCode, l = locationCode });
+
+
+
+                //(入库时记录生产日期)
+                //如果工人没填生产日期，系统默认算作今天
+                DateTime pd = produceDate ?? DateTime.Now.Date;
+
+                var stockId = db.QueryFirstOrDefault<int?>("SELECT Id FROM Stock WHERE GoodsCode = @g AND LocationCode = @l", new { g = goodsCode, l = locationCode });
 
                 if (stockId != null)
                 {
-                    db.Execute("UPDATE Stock SET Qty = Qty + @q, ReelId = @r, BatchNo = @b, InStockTime = GETDATE() WHERE Id = @id",
-                        new { q = qty, r = reelId, b = batchNo, id = stockId });
+                    // 更新库存时，刷新 ProduceDate
+                    db.Execute("UPDATE Stock SET Qty = Qty + @q, ReelId = @r, BatchNo = @b, InStockTime = GETDATE(), ProduceDate = @pd WHERE Id = @id",
+                        new { q = qty, r = reelId, b = batchNo, pd = pd, id = stockId });
                 }
                 else
                 {
-                    db.Execute("INSERT INTO Stock (GoodsCode, LocationCode, Qty, BatchNo, ReelId, InStockTime, FrozenQty) VALUES (@g, @l, @q, @b, @r, GETDATE(), 0)",
-                        new { g = goodsCode, l = locationCode, q = qty, b = batchNo, r = reelId });
+                    // 新增库存时，插入 ProduceDate
+                    db.Execute("INSERT INTO Stock (GoodsCode, LocationCode, Qty, BatchNo, ReelId, InStockTime, FrozenQty, ProduceDate) VALUES (@g, @l, @q, @b, @r, GETDATE(), 0, @pd)",
+                        new { g = goodsCode, l = locationCode, q = qty, b = batchNo, r = reelId, pd = pd });
                 }
+
+
 
                 string orderNo = "AUTO-IN-" + DateTime.Now.ToString("HHmmss");
                 db.Execute("INSERT INTO StockRecord (OrderNo, RecordType, GoodsCode, LocationCode, Qty, BatchNo, ReelId, OperateTime, Operator) VALUES (@o, 0, @g, @l, @q, @b, @r, GETDATE(), @op)",
@@ -1127,9 +1158,12 @@ namespace FIH_WMS_System.Services
             {
                 var dt = new System.Data.DataTable();
 
-                // 💡使用 ExecuteReader 获取底层数据流，并直接装载进 DataTable
-                // 这样 WinForms 的表格就能 100% 完美识别列名，再也不会重复拼接了！
-                var reader = db.ExecuteReader("SELECT Code as 物料编码, Name as 物料名称, Brand as 品牌, Spec as 规格, Category as 分类, SafeQty as 安全库存线 FROM Goods ORDER BY Id DESC");
+                // 使用 ExecuteReader 获取底层数据流，并直接装载进 DataTable
+                // 如此WinForms 的表格就能完美识别列名，不会重复拼接了
+
+                //(基础档案展示带上保质期)
+                // 新增：SQL中增加 ShelfLifeDays
+                var reader = db.ExecuteReader("SELECT Code as 物料编码, Name as 物料名称, Brand as 品牌, Spec as 规格, Category as 分类, SafeQty as 安全库存线, ShelfLifeDays as 保质期天数 FROM Goods ORDER BY Id DESC");
                 dt.Load(reader);
 
                 return dt;
@@ -1139,7 +1173,8 @@ namespace FIH_WMS_System.Services
         // ==========================================
         // 基础数据管理：新增物料档案 (支持录入品牌)
         // ==========================================
-        public bool AddNewGoods(string code, string name, string spec, string category, string brand)
+        // 参数中增加 shelfLifeDays(建档时写入保质期)
+        public bool AddNewGoods(string code, string name, string spec, string category, string brand, int shelfLifeDays)
         {
             using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
@@ -1147,9 +1182,11 @@ namespace FIH_WMS_System.Services
                 int count = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Goods WHERE Code = @c", new { c = code });
                 if (count > 0) return false; // 如果已经存在，直接返回失败
 
+                //(建档时写入保质期)
                 // 写入新的物料档案 (增加了 Brand, SafeQty 默认给0)
-                db.Execute("INSERT INTO Goods (Code, Name, Spec, Category, Brand, SafeQty) VALUES (@c, @n, @s, @cat, @b, 0)",
-                    new { c = code, n = name, s = spec, cat = category, b = brand });
+                //插入语句加上 ShelfLifeDays
+                db.Execute("INSERT INTO Goods (Code, Name, Spec, Category, Brand, SafeQty, ShelfLifeDays) VALUES (@c, @n, @s, @cat, @b, 0, @shelf)",
+                    new { c = code, n = name, s = spec, cat = category, b = brand, shelf = shelfLifeDays });
                 return true;
             }
         }

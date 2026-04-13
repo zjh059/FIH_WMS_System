@@ -40,12 +40,27 @@ namespace FIH_WMS_System.Services
         //加入了可选参数 allLocations(库位列表) 以及 targetX, targetY (产线 / 交接点坐标)
         public List<Stock> RecommendOutboundStocks(string goodsCode, List<Stock> currentStocks, OutboundStrategy strategy, List<Location> allLocations = null, int targetX = 0, int targetY = 0)
         {
-            // 1. 先过滤出含有该物料，且实际可用数量大于0的库存 (Qty - FrozenQty 是真实可用的)
+            // 1. 过滤可用库存：必须有货，且【未过期】！
             var availableStocks = currentStocks
-                .Where(s => s.GoodsCode == goodsCode && (s.Qty - s.FrozenQty) > 0)
-                .ToList();
+                    .Where(s => s.GoodsCode == goodsCode && (s.Qty - s.FrozenQty) > 0)
+                    .Where(s =>
+                    {
+                        // 👇 核心防过期防火墙！
+                        // 如果定义了保质期，且 (生产日期 + 保质期 < 今天)，则该批次属于过期报废品！
+                        if (s.Goods != null && s.Goods.ShelfLifeDays > 0 && s.ProduceDate.HasValue)
+                        {
+                            DateTime expireDate = s.ProduceDate.Value.AddDays(s.Goods.ShelfLifeDays);
+                            if (expireDate < DateTime.Now.Date)
+                            {
+                                // 报废品坚决不能流入产线！
+                                return false;
+                            }
+                        }
+                        return true; // 未过期或无保质期限制，放行
+                    })
+                    .ToList();
 
-            if (availableStocks.Count == 0) return new List<Stock>(); // 没货了
+            if (availableStocks.Count == 0) return new List<Stock>(); // 如果筛选完没货了（或者全过期了），直接返回空
 
             // 2. 根据不同策略进行排序推荐
             switch (strategy)
