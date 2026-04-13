@@ -17,7 +17,7 @@ namespace FIH_WMS_System.UI
 
         public WaveForm()
         {
-            InitializeComponent(); // 让 Designer.cs 去干排版的活儿
+            InitializeComponent(); //Designer.cs 去干排版的活
         }
 
         private void BtnAdd_Click(object sender, EventArgs e)

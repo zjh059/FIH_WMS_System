@@ -1066,7 +1066,7 @@ namespace FIH_WMS_System.Services
                 int locCount = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Location WHERE Code = @l", new { l = locationCode });
                 if (locCount == 0) return "ERROR_LOCATION";
 
-                // 👇 【核心升级：自定义编码规则引擎】
+                // 核心：自定义编码规则引擎
                 // 规则设定为：[品牌前缀(取前2位)]-[分类前缀(取前2位)]-[物料编码]-[年月日]-[4位流水号]
                 string brandPrefix = string.IsNullOrEmpty(goodsInfo.Brand) ? "XX" : (goodsInfo.Brand.Length >= 2 ? goodsInfo.Brand.Substring(0, 2).ToUpper() : goodsInfo.Brand.ToUpper());
                 string catPrefix = string.IsNullOrEmpty(goodsInfo.Category) ? "XX" : (goodsInfo.Category.Length >= 2 ? goodsInfo.Category.Substring(0, 2).ToUpper() : goodsInfo.Category.ToUpper());
