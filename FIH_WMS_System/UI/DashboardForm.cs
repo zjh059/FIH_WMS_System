@@ -171,11 +171,11 @@ namespace FIH_WMS_System.UI
 
 
 
-            optionLine.ToolTip.Visible = true; // 开启鼠标悬停提示
+            //optionLine.ToolTip.Visible = true; // 开启鼠标悬停提示
             //optionLine.Legend = new UILegend();
             //optionLine.Legend.AddData("入库总量");
             //optionLine.Legend.AddData("出库总量");
-            //optionLine.ToolTip.Visible = false;//老出现悬停提示的重复问题了，先暂时关掉它，等 Sunny.UI 官方修复了字典冲突 Bug 之后再打开
+            optionLine.ToolTip.Visible = false;//老出现悬停提示的重复问题了，先暂时关掉它，等 Sunny.UI 官方修复了字典冲突 Bug 之后再打开
 
 
 
@@ -273,13 +273,14 @@ namespace FIH_WMS_System.UI
 
 
 
-                //  终极修复：传入完整的 (X坐标, Y坐标)
+                //  修复：传入完整的 (X坐标, Y坐标)
                 seriesIn.Add(xIndex, inValue);
-                //seriesOut.Add(xIndex, outValue);
-                seriesOut.Add(xIndex + 0.0001, outValue);//Hack修复：给第二条线的 X 坐标加上极微小偏移（0.0001）
+                seriesOut.Add(xIndex, outValue);
+                //seriesOut.Add(xIndex + 0.0001, outValue);//Hack修复：给第二条线的 X 坐标加上极微小偏移（0.0001）
 
                 xIndex++; // 每画完一天，X 坐标往右挪一格
             }
+
 
             //optionLine.Series.Add(seriesIn);
             //optionLine.Series.Add(seriesOut);
@@ -292,6 +293,11 @@ namespace FIH_WMS_System.UI
 
 
             uiLineChart1.SetOption(optionLine);
+
+            // 解决鼠标悬停崩溃
+            // 直接禁用该折线图控件的交互！图表会正常、清晰地渲染显示，
+            // 但鼠标放上去时它会完全忽略，物理阻断底层 Bug 的触发。
+            uiLineChart1.Enabled = false;
         }
 
 
