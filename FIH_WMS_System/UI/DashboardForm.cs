@@ -145,6 +145,8 @@ namespace FIH_WMS_System.UI
             //optionLine.ToolTip = new UIToolTip();
             optionLine.ToolTip.Visible = true;
             //optionLine.ToolTip.Trigger = UIToolTipTrigger.Axis;
+            //修复：将触发模式强制设为 Item (单点触发)，绕开 SunnyUI 的聚合字典 Bug
+            //optionLine.ToolTip.Trigger = UIToolTipTrigger.Item;//v3.9.3，在这个版本中，UILineToolTip 确实还没有开放 Trigger 这个属性和对应的枚举值
 
 
 
@@ -173,6 +175,7 @@ namespace FIH_WMS_System.UI
             //optionLine.Legend = new UILegend();
             //optionLine.Legend.AddData("入库总量");
             //optionLine.Legend.AddData("出库总量");
+            //optionLine.ToolTip.Visible = false;//老出现悬停提示的重复问题了，先暂时关掉它，等 Sunny.UI 官方修复了字典冲突 Bug 之后再打开
 
 
 
@@ -261,17 +264,19 @@ namespace FIH_WMS_System.UI
                 //修复 2：防崩溃 Hack！破解 Sunny.UI 同值字典 Key 冲突 Bug
                 // 如果两个值完全一样（比如都是 0 ），偷偷加上极小的小数差。
                 // 这样界面悬停依然显示整数，但底层字典就不会因为 Key 重复而崩溃了！
-                if (inValue == outValue)
-                {
-                    outValue += 0.000001;
-                }
+                //if (inValue == outValue)
+                //{
+                //    outValue += 0.000001;
+                //}
+                //在 Sunny.UI 构建字典前，它内部调用了类似 Math.Round() 的格式化方法截断了小数，导致 0.000001 又变回了 0，从而依然引发了冲突。
 
 
 
 
                 //  终极修复：传入完整的 (X坐标, Y坐标)
                 seriesIn.Add(xIndex, inValue);
-                seriesOut.Add(xIndex, outValue);
+                //seriesOut.Add(xIndex, outValue);
+                seriesOut.Add(xIndex + 0.0001, outValue);//Hack修复：给第二条线的 X 坐标加上极微小偏移（0.0001）
 
                 xIndex++; // 每画完一天，X 坐标往右挪一格
             }
