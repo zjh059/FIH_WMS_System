@@ -646,5 +646,51 @@ namespace FIH_WMS_System
             UI.SysLogForm form = new UI.SysLogForm();
             form.ShowDialog();
         }
+
+        private void btnSetupLangs_Click(object sender, EventArgs e)
+        {
+            // 1. 判断当前是什么语言，决定下一步切成什么语言
+            string nextLang = "zh-CN";
+
+            if (Utils.LanguageHelper.CurrentLang == "zh-CN")
+            {
+                nextLang = "zh-TW"; // 简 -> 繁
+            }
+            else if (Utils.LanguageHelper.CurrentLang == "zh-TW")
+            {
+                nextLang = "en-US"; // 繁 -> 英
+            }
+            else
+            {
+                nextLang = "zh-CN"; // 英 -> 简
+            }
+
+            // 2. 让大脑加载新的语言包
+            Utils.LanguageHelper.LoadLanguage(nextLang);
+
+            // 3. 核心：瞬间刷新当前打开的所有窗口！
+            // Application.OpenForms 包含了当前屏幕上显示的所有窗体
+            foreach (Form form in Application.OpenForms)
+            {
+                Utils.LanguageHelper.TranslateForm(form);
+            }
+
+            // 4.加个专属的语音播报
+            if (nextLang == "en-US")
+            {
+                Utils.VoiceHelper.Speak("Language switched to English");
+            }
+            else if (nextLang == "zh-TW")
+            {
+                Utils.VoiceHelper.Speak("已切換為繁體中文");
+            }
+            else
+            {
+                Utils.VoiceHelper.Speak("已切换为简体中文");
+            }
+        }
+
+
+
     }
 }

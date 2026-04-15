@@ -56,6 +56,7 @@
             btnUserManage = new Sunny.UI.UIButton();
             btnSysVoiceSetup = new Sunny.UI.UIButton();
             btnSysLog = new Sunny.UI.UIButton();
+            btnSetupLangs = new Sunny.UI.UIButton();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             SuspendLayout();
@@ -74,7 +75,7 @@
             // 
             label1.AutoSize = true;
             label1.Font = new Font("微软雅黑", 24F, FontStyle.Bold, GraphicsUnit.Point, 134);
-            label1.Location = new Point(665, 99);
+            label1.Location = new Point(754, 85);
             label1.Name = "label1";
             label1.Size = new Size(593, 75);
             label1.TabIndex = 1;
@@ -361,6 +362,7 @@
             // 
             // btnSysLog
             // 
+            btnSysLog.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnSysLog.FillColor = Color.Orchid;
             btnSysLog.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
             btnSysLog.Location = new Point(1490, 99);
@@ -372,10 +374,24 @@
             btnSysLog.TipsFont = new Font("宋体", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
             btnSysLog.Click += btnSysLog_Click;
             // 
+            // btnSetupLangs
+            // 
+            btnSetupLangs.FillColor = Color.FromArgb(192, 64, 0);
+            btnSetupLangs.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
+            btnSetupLangs.Location = new Point(397, 99);
+            btnSetupLangs.MinimumSize = new Size(1, 1);
+            btnSetupLangs.Name = "btnSetupLangs";
+            btnSetupLangs.Size = new Size(217, 61);
+            btnSetupLangs.TabIndex = 28;
+            btnSetupLangs.Text = "🔄 简/繁/英";
+            btnSetupLangs.TipsFont = new Font("宋体", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
+            btnSetupLangs.Click += btnSetupLangs_Click;
+            // 
             // MainForm
             // 
             AutoScaleMode = AutoScaleMode.None;
             ClientSize = new Size(1967, 1452);
+            Controls.Add(btnSetupLangs);
             Controls.Add(btnSysLog);
             Controls.Add(btnSysVoiceSetup);
             Controls.Add(btnUserManage);
@@ -435,5 +451,6 @@
         private Sunny.UI.UIButton btnUserManage;
         private Sunny.UI.UIButton btnSysVoiceSetup;
         private Sunny.UI.UIButton btnSysLog;
+        private Sunny.UI.UIButton btnSetupLangs;
     }
 }
