@@ -23,6 +23,7 @@ namespace FIH_WMS_System.UI
         private WmsService wmsService = new WmsService();
 
         public DateTime? InputProduceDate { get; set; }
+        public string InputOrderNo { get; set; }
 
         public InStockForm()
         {
@@ -66,6 +67,13 @@ namespace FIH_WMS_System.UI
                 InputLocCode = txtLocCode.Text.Trim();
                 InputQty = int.Parse(txtQty.Text);
 
+
+                //收集选择的单号
+                InputOrderNo = cmbOrder.SelectedIndex > 0 ? cmbOrder.SelectedItem.ToString() : "";
+
+
+
+
                 //新增：如果勾选了生产日期，就把日期装进口袋，否则给 null
                 if (dtpProduceDate.Checked)
                 {
@@ -83,7 +91,7 @@ namespace FIH_WMS_System.UI
                     return;
                 }
 
-                // 👇 【核心改动：触发智能分配】
+                // 核心改动：触发智能分配
                 // 如果用户偷懒没填库位，就用 WmsService 帮他找！
                 if (string.IsNullOrEmpty(InputLocCode))
                 {
@@ -144,6 +152,14 @@ namespace FIH_WMS_System.UI
             // 绑定扫码枪(回车键)监听事件
             txtGoodsCode.KeyDown += new KeyEventHandler(txtGoodsCode_KeyDown);
             txtQty.KeyDown += new KeyEventHandler(txtQty_KeyDown);
+
+
+
+            //载入未完成的采购单
+            var orders = wmsService.GetPendingInboundOrders();
+            cmbOrder.Items.Add("--- 不关联单据 (无源盲收入库) ---");
+            foreach (var o in orders) cmbOrder.Items.Add(o);
+            cmbOrder.SelectedIndex = 0; // 默认无单入库
         }
 
 
@@ -228,6 +244,29 @@ namespace FIH_WMS_System.UI
 
                 // 瞬间自动点击“确认入库”按钮
                 btnConfirm_Click(null, null);
+            }
+        }
+
+
+        //新增事件：当用户选择了一个采购单，智能帮他填入物料和剩余欠料数量！
+        private void cmbOrder_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbOrder.SelectedIndex > 0)
+            {
+                string orderNo = cmbOrder.SelectedItem.ToString();
+                var detail = wmsService.GetNextPendingDetail(orderNo);
+                if (detail != null)
+                {
+                    txtGoodsCode.Text = detail.GoodsCode;
+                    int remaining = detail.PlanQty - detail.ActualQty; // 计算还欠多少个
+                    txtQty.Text = remaining.ToString();
+
+                    Utils.VoiceHelper.Speak("已智能载入采购单明细，请确认数量并扫码入库");
+                }
+                else
+                {
+                    txtGoodsCode.Clear(); txtQty.Clear();
+                }
             }
         }
 

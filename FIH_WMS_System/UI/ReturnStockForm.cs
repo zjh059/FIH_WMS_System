@@ -26,14 +26,17 @@ namespace FIH_WMS_System.UI
             string code = txtGoodsCode.Text.Trim();
             int qty = (int)numQty.Value;
 
+            //获取输入的关联工单号
+            string relatedOrder = txtOrder.Text.Trim();
+
             if (string.IsNullOrEmpty(code) || qty <= 0)
             {
                 MessageBox.Show("请输入正确的物料编码和数量！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // 呼叫后台算法
-            string targetLoc = wms.SmartReturnMaterial(code, qty);
+            // 呼叫后台算法，并把 relatedOrder 传进去
+            string targetLoc = wms.SmartReturnMaterial(code, qty, relatedOrder);
 
             if (targetLoc == "ERROR_GOODS")
             {

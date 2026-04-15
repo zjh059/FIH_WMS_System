@@ -40,12 +40,14 @@
             btnRecommend = new Button();
             lblProduceDate = new Label();
             dtpProduceDate = new DateTimePicker();
+            lblOrder = new Label();
+            cmbOrder = new ComboBox();
             SuspendLayout();
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(46, 46);
+            label1.Location = new Point(46, 111);
             label1.Name = "label1";
             label1.Size = new Size(117, 28);
             label1.TabIndex = 0;
@@ -54,7 +56,7 @@
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(429, 46);
+            label2.Location = new Point(46, 189);
             label2.Name = "label2";
             label2.Size = new Size(117, 28);
             label2.TabIndex = 1;
@@ -63,22 +65,22 @@
             // txtGoodsCode
             // 
             txtGoodsCode.BackColor = SystemColors.Info;
-            txtGoodsCode.Location = new Point(169, 43);
+            txtGoodsCode.Location = new Point(254, 108);
             txtGoodsCode.Name = "txtGoodsCode";
-            txtGoodsCode.Size = new Size(220, 34);
+            txtGoodsCode.Size = new Size(702, 34);
             txtGoodsCode.TabIndex = 2;
             // 
             // txtQty
             // 
-            txtQty.Location = new Point(552, 43);
+            txtQty.Location = new Point(254, 186);
             txtQty.Name = "txtQty";
-            txtQty.Size = new Size(220, 34);
+            txtQty.Size = new Size(702, 34);
             txtQty.TabIndex = 3;
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(46, 143);
+            label3.Location = new Point(46, 262);
             label3.Name = "label3";
             label3.Size = new Size(117, 28);
             label3.TabIndex = 4;
@@ -86,7 +88,7 @@
             // 
             // btnConfirm
             // 
-            btnConfirm.Location = new Point(552, 463);
+            btnConfirm.Location = new Point(736, 577);
             btnConfirm.Name = "btnConfirm";
             btnConfirm.Size = new Size(220, 40);
             btnConfirm.TabIndex = 5;
@@ -96,15 +98,15 @@
             // 
             // txtLocCode
             // 
-            txtLocCode.Location = new Point(169, 140);
+            txtLocCode.Location = new Point(254, 259);
             txtLocCode.Name = "txtLocCode";
-            txtLocCode.Size = new Size(220, 34);
+            txtLocCode.Size = new Size(702, 34);
             txtLocCode.TabIndex = 6;
             // 
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(46, 254);
+            label4.Location = new Point(46, 354);
             label4.Name = "label4";
             label4.Size = new Size(117, 28);
             label4.TabIndex = 7;
@@ -114,14 +116,14 @@
             // 
             cmbStrategy.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbStrategy.FormattingEnabled = true;
-            cmbStrategy.Location = new Point(169, 251);
+            cmbStrategy.Location = new Point(254, 351);
             cmbStrategy.Name = "cmbStrategy";
-            cmbStrategy.Size = new Size(603, 36);
+            cmbStrategy.Size = new Size(702, 36);
             cmbStrategy.TabIndex = 8;
             // 
             // btnRecommend
             // 
-            btnRecommend.Location = new Point(46, 463);
+            btnRecommend.Location = new Point(46, 577);
             btnRecommend.Name = "btnRecommend";
             btnRecommend.Size = new Size(144, 40);
             btnRecommend.TabIndex = 9;
@@ -132,7 +134,7 @@
             // lblProduceDate
             // 
             lblProduceDate.AutoSize = true;
-            lblProduceDate.Location = new Point(46, 357);
+            lblProduceDate.Location = new Point(46, 453);
             lblProduceDate.Name = "lblProduceDate";
             lblProduceDate.Size = new Size(173, 28);
             lblProduceDate.TabIndex = 10;
@@ -141,17 +143,36 @@
             // dtpProduceDate
             // 
             dtpProduceDate.Checked = false;
-            dtpProduceDate.Location = new Point(254, 352);
+            dtpProduceDate.Location = new Point(254, 448);
             dtpProduceDate.Name = "dtpProduceDate";
             dtpProduceDate.ShowCheckBox = true;
-            dtpProduceDate.Size = new Size(518, 34);
+            dtpProduceDate.Size = new Size(702, 34);
             dtpProduceDate.TabIndex = 11;
+            // 
+            // lblOrder
+            // 
+            lblOrder.AutoSize = true;
+            lblOrder.Location = new Point(46, 37);
+            lblOrder.Name = "lblOrder";
+            lblOrder.Size = new Size(138, 28);
+            lblOrder.TabIndex = 12;
+            lblOrder.Text = "关联采购单：";
+            // 
+            // cmbOrder
+            // 
+            cmbOrder.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbOrder.FormattingEnabled = true;
+            cmbOrder.Location = new Point(254, 34);
+            cmbOrder.Name = "cmbOrder";
+            cmbOrder.Size = new Size(702, 36);
+            cmbOrder.TabIndex = 13;
+            cmbOrder.SelectedIndexChanged += cmbOrder_SelectedIndexChanged;
             // 
             // InStockForm
             // 
             AutoScaleDimensions = new SizeF(13F, 28F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(815, 574);
+            ClientSize = new Size(1004, 665);
             Controls.Add(btnRecommend);
             Controls.Add(cmbStrategy);
             Controls.Add(label4);
@@ -164,6 +185,8 @@
             Controls.Add(label1);
             Controls.Add(lblProduceDate);
             Controls.Add(dtpProduceDate);
+            Controls.Add(lblOrder);
+            Controls.Add(cmbOrder);
             Name = "InStockForm";
             Text = "InStockForm";
             Load += InStockForm_Load;
@@ -187,5 +210,8 @@
 
         private System.Windows.Forms.Label lblProduceDate;
         private System.Windows.Forms.DateTimePicker dtpProduceDate;
+
+        private System.Windows.Forms.Label lblOrder;
+        private System.Windows.Forms.ComboBox cmbOrder;
     }
 }

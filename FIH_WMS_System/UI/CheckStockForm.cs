@@ -29,7 +29,11 @@ namespace FIH_WMS_System.UI
         {
             cmbCountType.Items.Add("0 - 按指定库位盘点");
             cmbCountType.Items.Add("1 - 按指定物料盘点");
+            cmbCountType.Items.Add("2 - 按物料分类盘点"); //  新增
+            cmbCountType.Items.Add("3 - 按物料品牌盘点"); //  新增
             cmbCountType.SelectedIndex = 0; // 默认选中第一个
+
+            Utils.VoiceHelper.Speak("请选择盘点方式并输入关键字");
 
         }
 
@@ -114,6 +118,20 @@ namespace FIH_WMS_System.UI
                 "一键平账确认",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
+
+
+            // 检查是否有极端差异（例如实盘为0，但账面有很多）
+            int zeroCount = currentCountList.Count(x => x.PhysicalQty == 0 && x.SystemQty > 100);
+            if (zeroCount > 0)
+            {
+                if (MessageBox.Show($"检测到有 {zeroCount} 项物料实盘数为0，这会导致库存被清空，请确认是否为漏盘？", "风险警告", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                {
+                    return; // 用户选择重新检查，拦截提交
+                }
+            }
+
+
+
             if (result == DialogResult.Yes)
             {
                 // 调用服务层的一键批量平账功能
@@ -128,6 +146,9 @@ namespace FIH_WMS_System.UI
                     MessageBox.Show("提交失败！数据库发生异常，请重试。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+
+
+
         }
     }
 }

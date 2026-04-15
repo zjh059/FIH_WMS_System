@@ -874,8 +874,9 @@ namespace FIH_WMS_System.Services
         // ==========================================
         public List<StockCountItem> GenerateCountList(int countType, string keyword)
         {
-            // countType 规则约定: 0=按单一库位盘点, 1=按指定物料盘点, 2=全仓盲盘 (对应文档的多方式盘点要求)
-            using (var db = new SqlConnection(connStr))
+            //// countType 规则约定: 0=按单一库位盘点, 1=按指定物料盘点, 2=全仓盲盘 (对应文档的多方式盘点要求)
+            //// 0=按单一库位, 1=按指定物料, 2=按物料分类盘点, 3=按品牌盘点（更新）
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
                 // 基础 SQL：关联查询库存和物料名称
                 string sql = @"
@@ -887,6 +888,7 @@ namespace FIH_WMS_System.Services
                     WHERE s.Qty > 0";
 
                 // 动态拼接查询条件
+                //核心扩展：增加分类和品牌判定逻辑
                 if (countType == 0 && !string.IsNullOrEmpty(keyword))
                 {
                     sql += " AND s.LocationCode = @kw";
@@ -894,6 +896,16 @@ namespace FIH_WMS_System.Services
                 else if (countType == 1 && !string.IsNullOrEmpty(keyword))
                 {
                     sql += " AND s.GoodsCode = @kw";
+                }
+                else if (countType == 2 && !string.IsNullOrEmpty(keyword))
+                {
+                    //  对应 PDF 需求：物料分类盘点 
+                    sql += " AND g.Category = @kw";
+                }
+                else if (countType == 3 && !string.IsNullOrEmpty(keyword))
+                {
+                    //  对应 PDF 需求：物料品牌盘点 
+                    sql += " AND g.Brand = @kw";
                 }
 
                 // 按照库位和物料排序，方便工人按顺序去数
@@ -1075,7 +1087,8 @@ namespace FIH_WMS_System.Services
         // 智能制造：贴标入库 (自动生成并记录 ReelId)
         // ==========================================
         //参数增加 produceDate，选填
-        public string InStockWithLabel(string goodsCode, int qty, string locationCode, DateTime? produceDate = null)
+        //// 1. 在参数列表最后增加 relatedOrderNo
+        public string InStockWithLabel(string goodsCode, int qty, string locationCode, DateTime? produceDate = null, string relatedOrderNo = "")
         {
             using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
@@ -1121,11 +1134,45 @@ namespace FIH_WMS_System.Services
 
 
 
-                string orderNo = "AUTO-IN-" + DateTime.Now.ToString("HHmmss");
+                //string orderNo = "AUTO-IN-" + DateTime.Now.ToString("HHmmss");
+                //2. 修改：如果有传关联单号，就用它；没有才生成 AUTO-IN
+                string orderNo = string.IsNullOrEmpty(relatedOrderNo) ? "AUTO-IN-" + DateTime.Now.ToString("HHmmss") : relatedOrderNo;
+
+
+
+                //db.Execute("INSERT INTO StockRecord (OrderNo, RecordType, GoodsCode, LocationCode, Qty, BatchNo, ReelId, OperateTime, Operator) VALUES (@o, 0, @g, @l, @q, @b, @r, GETDATE(), @op)",
+                //    new { o = orderNo, g = goodsCode, l = locationCode, q = qty, b = batchNo, r = reelId, op = FIH_WMS_System.Program.CurrentUsername });
+
+                //db.Execute("UPDATE Location SET IsUsed = 1 WHERE Code = @l", new { l = locationCode });
+                // ... (记流水账和更新Location逻辑保持不变，确保流水账里用到上面的 orderNo) ...
                 db.Execute("INSERT INTO StockRecord (OrderNo, RecordType, GoodsCode, LocationCode, Qty, BatchNo, ReelId, OperateTime, Operator) VALUES (@o, 0, @g, @l, @q, @b, @r, GETDATE(), @op)",
                     new { o = orderNo, g = goodsCode, l = locationCode, q = qty, b = batchNo, r = reelId, op = FIH_WMS_System.Program.CurrentUsername });
-
                 db.Execute("UPDATE Location SET IsUsed = 1 WHERE Code = @l", new { l = locationCode });
+
+
+
+                //3. 核心新增：联动闭环！反写更新采购单状态
+                if (!string.IsNullOrEmpty(relatedOrderNo))
+                {
+                    // ① 累加明细表的实际收货数量
+                    db.Execute("UPDATE WmsOrderDetail SET ActualQty = ActualQty + @q WHERE OrderNo = @o AND GoodsCode = @g", new { q = qty, o = relatedOrderNo, g = goodsCode });
+
+                    // ② 判定该条明细是否收齐 (0待处理, 1部分完成, 2已完成)
+                    db.Execute("UPDATE WmsOrderDetail SET Status = CASE WHEN ActualQty >= PlanQty THEN 2 ELSE 1 END WHERE OrderNo = @o AND GoodsCode = @g", new { o = relatedOrderNo, g = goodsCode });
+
+                    // ③ 检查整个主订单的所有明细是不是都收齐了？
+                    int pendingCount = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM WmsOrderDetail WHERE OrderNo = @o AND Status < 2", new { o = relatedOrderNo });
+                    if (pendingCount == 0)
+                    {
+                        db.Execute("UPDATE WmsOrder SET Status = 2 WHERE OrderNo = @o", new { o = relatedOrderNo }); // 全部收齐，主单结案！
+                    }
+                    else
+                    {
+                        db.Execute("UPDATE WmsOrder SET Status = 1 WHERE OrderNo = @o", new { o = relatedOrderNo }); // 还有欠料，主单变更为“执行中”
+                    }
+                }
+
+
 
                 return reelId;
             }
@@ -1193,54 +1240,66 @@ namespace FIH_WMS_System.Services
 
 
         // ==========================================
-        // 逆向物流：产线返料退回 (自动合并碎片 + 呼叫AGV)
+        // 逆向物流：产线返料退回 (自动合并碎片 + 呼叫AGV + 订单追溯)
         // ==========================================
-        public string SmartReturnMaterial(string goodsCode, int qty)
+        // 新增第三个参数 relatedOrderNo，默认为空
+        public string SmartReturnMaterial(string goodsCode, int qty, string relatedOrderNo = "")
         {
-            using (var db = new SqlConnection(connStr))
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
                 // 1. 安检：校验物料是否存在
-                int goodsCount = db.QueryFirstOrDefault<int>("SELECT COUNT(1) FROM Goods WHERE Code = @g", new { g = goodsCode });
+                int goodsCount = Dapper.SqlMapper.QueryFirstOrDefault<int>(db, "SELECT COUNT(1) FROM Goods WHERE Code = @g", new { g = goodsCode });
                 if (goodsCount == 0) return "ERROR_GOODS";
 
                 // 2. 智能算法：找库位。优先找【同类物料且未满的碎片库位】进行合并！
-                string targetLoc = db.QueryFirstOrDefault<string>(
+                string targetLoc = Dapper.SqlMapper.QueryFirstOrDefault<string>(db,
                     "SELECT TOP 1 LocationCode FROM Stock WHERE GoodsCode = @g ORDER BY Qty ASC", new { g = goodsCode });
 
-                // 如果没找到同类物料，就委屈一下，找一个完全空闲的新库位
+                // 如果没找到同类物料，找一个完全空闲的新库位
                 if (string.IsNullOrEmpty(targetLoc))
                 {
-                    targetLoc = db.QueryFirstOrDefault<string>(
-                        "SELECT TOP 1 Code FROM Location WHERE IsUsed = 0 ORDER BY Code ASC");
+                    targetLoc = Dapper.SqlMapper.QueryFirstOrDefault<string>(db,
+                        "SELECT TOP 1 Code FROM Location WHERE IsUsed = 0 AND Status = 0 ORDER BY Code ASC");
                 }
 
                 if (string.IsNullOrEmpty(targetLoc)) return "ERROR_FULL"; // 仓库满了
 
                 // 3. 执行入账
                 string reelId = $"{goodsCode}-RET-{DateTime.Now.ToString("yyyyMMdd")}-{new Random().Next(1000, 9999)}";
-                string batchNo = "RETURN-" + DateTime.Now.ToString("yyyyMMdd"); // 特殊的退料批次前缀
 
-                var stockId = db.QueryFirstOrDefault<int?>("SELECT Id FROM Stock WHERE GoodsCode = @g AND LocationCode = @l", new { g = goodsCode, l = targetLoc });
+
+
+                //string batchNo = "RETURN-" + DateTime.Now.ToString("yyyyMMdd"); // 特殊的退料批次前缀
+                //核心追溯：如果填写了关联工单，这批退料的批次号直接打上工单烙印
+                string batchNo = string.IsNullOrEmpty(relatedOrderNo) ? "RETURN-" + DateTime.Now.ToString("yyyyMMdd") : "RET-" + relatedOrderNo;
+
+
+
+                var stockId = Dapper.SqlMapper.QueryFirstOrDefault<int?>(db, "SELECT Id FROM Stock WHERE GoodsCode = @g AND LocationCode = @l", new { g = goodsCode, l = targetLoc });
 
                 if (stockId != null)
                 {
-                    db.Execute("UPDATE Stock SET Qty = Qty + @q, ReelId = @r, BatchNo = @b, InStockTime = GETDATE() WHERE Id = @id", new { q = qty, r = reelId, b = batchNo, id = stockId });
+                    Dapper.SqlMapper.Execute(db, "UPDATE Stock SET Qty = Qty + @q, ReelId = @r, BatchNo = @b, InStockTime = GETDATE() WHERE Id = @id", new { q = qty, r = reelId, b = batchNo, id = stockId });
                 }
                 else
                 {
-                    db.Execute("INSERT INTO Stock (GoodsCode, LocationCode, Qty, BatchNo, ReelId, InStockTime, FrozenQty) VALUES (@g, @l, @q, @b, @r, GETDATE(), 0)",
+                    Dapper.SqlMapper.Execute(db, "INSERT INTO Stock (GoodsCode, LocationCode, Qty, BatchNo, ReelId, InStockTime, FrozenQty) VALUES (@g, @l, @q, @b, @r, GETDATE(), 0)",
                         new { g = goodsCode, l = targetLoc, q = qty, b = batchNo, r = reelId });
-                    db.Execute("UPDATE Location SET IsUsed = 1 WHERE Code = @l", new { l = targetLoc });
+                    Dapper.SqlMapper.Execute(db, "UPDATE Location SET IsUsed = 1 WHERE Code = @l", new { l = targetLoc });
                 }
 
                 // 4. 写流水账 (记录为入库 RecordType=0)
-                string orderNo = "RETURN-" + DateTime.Now.ToString("HHmmss");
-                db.Execute("INSERT INTO StockRecord (OrderNo, RecordType, GoodsCode, LocationCode, Qty, BatchNo, ReelId, OperateTime, Operator) VALUES (@o, 0, @g, @l, @q, @b, @r, GETDATE(), @op)",
+                //string orderNo = "RETURN-" + DateTime.Now.ToString("HHmmss");
+                //流水账的单据号也变更为工单号相关
+                string orderNo = string.IsNullOrEmpty(relatedOrderNo) ? "RETURN-" + DateTime.Now.ToString("HHmmss") : "RET-" + relatedOrderNo;
+
+                Dapper.SqlMapper.Execute(db, "INSERT INTO StockRecord (OrderNo, RecordType, GoodsCode, LocationCode, Qty, BatchNo, ReelId, OperateTime, Operator) VALUES (@o, 0, @g, @l, @q, @b, @r, GETDATE(), @op)",
                     new { o = orderNo, g = goodsCode, l = targetLoc, q = qty, b = batchNo, r = reelId, op = FIH_WMS_System.Program.CurrentUsername });
+
 
                 // 5. 核心：生成 AGV 回收任务！(起点是产线，终点是算出来的智能库位)
                 string taskNo = "AGV-RET-" + DateTime.Now.ToString("HHmmss");
-                db.Execute("INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) VALUES (@tn, 0, 0, @g, @q, '产线接驳口(退料)', @toLoc, GETDATE())",
+                Dapper.SqlMapper.Execute(db, "INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) VALUES (@tn, 0, 0, @g, @q, '产线接驳口(退料)', @toLoc, GETDATE())",
                     new { tn = taskNo, g = goodsCode, q = qty, toLoc = targetLoc });
 
                 return targetLoc; // 返回算出来的库位名，给界面弹窗用
@@ -1565,6 +1624,53 @@ namespace FIH_WMS_System.Services
                     db.Execute("UPDATE Stock SET FrozenQty = 0 WHERE Id = @id", new { id = stockId });
                 }
                 return true;
+            }
+        }
+
+
+        // ==========================================
+        // 业务流转：获取待收货的采购入库单
+        // ==========================================
+        public List<string> GetPendingInboundOrders()
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                // 查找订单类型为入库(0)，且状态不是已完成(< 2)的单号
+                return db.Query<string>("SELECT OrderNo FROM WmsOrder WHERE OrderType = 0 AND Status < 2 ORDER BY CreateTime DESC").ToList();
+            }
+        }
+
+        // 业务流转：根据采购单号，智能带出下一条缺料明细
+        public Models.WmsOrderDetail GetNextPendingDetail(string orderNo)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                // 找出这个订单下，还没收齐货的第一条物料
+                return db.QueryFirstOrDefault<Models.WmsOrderDetail>("SELECT * FROM WmsOrderDetail WHERE OrderNo = @o AND Status < 2", new { o = orderNo });
+            }
+        }
+
+
+        // ==========================================
+        // 14. 获取图表统计数据 (近7天出入库流量趋势)
+        // ==========================================
+        public List<dynamic> Get7DaysTraffic()
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                // 核心逻辑：使用 CONVERT 截取日期部分(砍掉时分秒)，按天分组，统计过去 7 天每天的进出总量
+                string sql = @"
+            SELECT 
+                CONVERT(varchar(10), OperateTime, 120) as DateStr,
+                RecordType,
+                SUM(Qty) as TotalQty
+            FROM StockRecord
+            WHERE OperateTime >= CAST(DATEADD(day, -6, GETDATE()) AS DATE)
+            GROUP BY CONVERT(varchar(10), OperateTime, 120), RecordType
+            ORDER BY DateStr";
+
+                // 直接用 Dapper 返回 dynamic 列表，前台拆解
+                return Dapper.SqlMapper.Query(db, sql).ToList();
             }
         }
 

@@ -144,7 +144,10 @@ namespace FIH_WMS_System
                 //string generatedReelId = wms.InStockWithLabel(form.InputGoodsCode, form.InputQty, form.InputLocCode);
 
                 // 把 form.InputProduceDate 加到参数列表的最后面
-                string generatedReelId = wms.InStockWithLabel(form.InputGoodsCode, form.InputQty, form.InputLocCode, form.InputProduceDate);
+                //string generatedReelId = wms.InStockWithLabel(form.InputGoodsCode, form.InputQty, form.InputLocCode, form.InputProduceDate);
+
+                //核心修改：在最后加上 form.InputOrderNo 传给大脑！
+                string generatedReelId = wms.InStockWithLabel(form.InputGoodsCode, form.InputQty, form.InputLocCode, form.InputProduceDate, form.InputOrderNo);
 
 
                 // 【核心新增：精准的错误弹窗拦截】

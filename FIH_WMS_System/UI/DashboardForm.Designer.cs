@@ -15,21 +15,54 @@
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.uiBarChart1 = new Sunny.UI.UIBarChart();
             this.uiPieChart1 = new Sunny.UI.UIPieChart();
+
+            //1. 声明折线图
+            this.uiLineChart1 = new Sunny.UI.UILineChart();
+
             this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
             // 
             // tableLayoutPanel1 (核心：自适应网格)
             // 
+            // tableLayoutPanel1 (变成 2 行 2 列)
+            //this.tableLayoutPanel1.ColumnCount = 2;
+            //this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F)); // 左边永远50%
+            //this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F)); // 右边永远50%
+
             this.tableLayoutPanel1.ColumnCount = 2;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F)); // 左边永远50%
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F)); // 右边永远50%
-            this.tableLayoutPanel1.Controls.Add(this.uiBarChart1, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.uiPieChart1, 1, 0);
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+
+
+
+            //2. 行数改为 2，各占 50% 高度
+            this.tableLayoutPanel1.RowCount = 2;
+            this.tableLayoutPanel1.RowStyles.Clear();
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+
+
+
+            // 添加三个图表到对应的格子里
+            this.tableLayoutPanel1.Controls.Add(this.uiBarChart1, 0, 0); // 左上
+            this.tableLayoutPanel1.Controls.Add(this.uiPieChart1, 1, 0); // 右上
+            this.tableLayoutPanel1.Controls.Add(this.uiLineChart1, 0, 1); // 👇 左下
+
+
+
+            //让折线图横跨底部的两列
+            this.tableLayoutPanel1.SetColumnSpan(this.uiLineChart1, 2);
+
+
+
+
+            //this.tableLayoutPanel1.Controls.Add(this.uiBarChart1, 0, 0);
+            //this.tableLayoutPanel1.Controls.Add(this.uiPieChart1, 1, 0);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 1;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            //this.tableLayoutPanel1.RowCount = 1;
+            //this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel1.Size = new System.Drawing.Size(1268, 840);
             this.tableLayoutPanel1.TabIndex = 0;
             // 
@@ -52,8 +85,23 @@
             this.uiPieChart1.Size = new System.Drawing.Size(614, 820);
             this.uiPieChart1.TabIndex = 1;
             this.uiPieChart1.Text = "uiPieChart1";
+
+
             // 
-            // DashboardForm
+            // uiLineChart1 (新增的折线图)
+            // 
+            this.uiLineChart1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.uiLineChart1.Font = new System.Drawing.Font("微软雅黑", 12F);
+            this.uiLineChart1.Location = new System.Drawing.Point(10, 430);
+            this.uiLineChart1.Name = "uiLineChart1";
+            this.uiLineChart1.Size = new System.Drawing.Size(1248, 400);
+            this.uiLineChart1.TabIndex = 2;
+            this.uiLineChart1.Text = "uiLineChart1";
+
+
+
+            // 
+            // DashboardForm窗体自身设置
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(13F, 28F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -71,5 +119,7 @@
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private Sunny.UI.UIBarChart uiBarChart1;
         private Sunny.UI.UIPieChart uiPieChart1;
+
+        private Sunny.UI.UILineChart uiLineChart1;
     }
 }
