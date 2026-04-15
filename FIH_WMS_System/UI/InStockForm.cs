@@ -138,7 +138,10 @@ namespace FIH_WMS_System.UI
                 { InboundStrategy.Manual, "Manual-直接人工指定" },
                 { InboundStrategy.SameMaterialMerge, "SameMaterialMerge-按未满库位入库 (推荐合并)" },
                 { InboundStrategy.EmptyLocationFirst, "EmptyLocationFirst-按空库位入库 (不混放)" },
-                { InboundStrategy.NearestFirst, "NearestFirst-按就近库位入库 (最高效)" }
+                { InboundStrategy.NearestFirst, "NearestFirst-按就近库位入库 (最高效)" },
+
+                // 新增冷热算法
+                { InboundStrategy.UsageFrequency, "UsageFrequency-按使用频率入库 (智能冷热分区)" }
             };
 
             // 绑定到下拉框
@@ -148,6 +151,8 @@ namespace FIH_WMS_System.UI
 
             // 默认选中 "按未满库位入库"
             cmbStrategy.SelectedValue = InboundStrategy.SameMaterialMerge;
+            //或者可以默认选中“智能冷热分区”，让系统自动帮用户分区存储热点物料和冷门物料
+            //cmbStrategy.SelectedValue = InboundStrategy.UsageFrequency;
 
             // 绑定扫码枪(回车键)监听事件
             txtGoodsCode.KeyDown += new KeyEventHandler(txtGoodsCode_KeyDown);

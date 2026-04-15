@@ -55,6 +55,7 @@
             btnOrderCenter = new Sunny.UI.UIButton();
             btnUserManage = new Sunny.UI.UIButton();
             btnSysVoiceSetup = new Sunny.UI.UIButton();
+            btnSysLog = new Sunny.UI.UIButton();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             SuspendLayout();
@@ -171,7 +172,7 @@
             dataGridViewCellStyle5.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
             dataGridView1.RowsDefaultCellStyle = dataGridViewCellStyle5;
             dataGridView1.SelectedIndex = -1;
-            dataGridView1.Size = new Size(1267, 1056);
+            dataGridView1.Size = new Size(1476, 1056);
             dataGridView1.StripeOddColor = Color.FromArgb(235, 243, 255);
             dataGridView1.TabIndex = 11;
             // 
@@ -252,7 +253,7 @@
             btnLogout.FillColor = Color.Red;
             btnLogout.FillColor2 = Color.Silver;
             btnLogout.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            btnLogout.Location = new Point(1502, 99);
+            btnLogout.Location = new Point(1711, 99);
             btnLogout.MinimumSize = new Size(1, 1);
             btnLogout.Name = "btnLogout";
             btnLogout.Size = new Size(162, 61);
@@ -265,7 +266,7 @@
             // 
             btnExportExcel.FillColor = Color.DarkGreen;
             btnExportExcel.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            btnExportExcel.Location = new Point(1329, 1320);
+            btnExportExcel.Location = new Point(1538, 1320);
             btnExportExcel.MinimumSize = new Size(1, 1);
             btnExportExcel.Name = "btnExportExcel";
             btnExportExcel.Size = new Size(335, 61);
@@ -358,10 +359,24 @@
             btnSysVoiceSetup.TipsFont = new Font("宋体", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
             btnSysVoiceSetup.Click += btnSysVoiceSetup_Click;
             // 
+            // btnSysLog
+            // 
+            btnSysLog.FillColor = Color.Orchid;
+            btnSysLog.Font = new Font("宋体", 12F, FontStyle.Regular, GraphicsUnit.Point, 134);
+            btnSysLog.Location = new Point(1490, 99);
+            btnSysLog.MinimumSize = new Size(1, 1);
+            btnSysLog.Name = "btnSysLog";
+            btnSysLog.Size = new Size(173, 61);
+            btnSysLog.TabIndex = 27;
+            btnSysLog.Text = "🛡️ 系统日志";
+            btnSysLog.TipsFont = new Font("宋体", 9F, FontStyle.Regular, GraphicsUnit.Point, 134);
+            btnSysLog.Click += btnSysLog_Click;
+            // 
             // MainForm
             // 
             AutoScaleMode = AutoScaleMode.None;
-            ClientSize = new Size(1750, 1452);
+            ClientSize = new Size(1967, 1452);
+            Controls.Add(btnSysLog);
             Controls.Add(btnSysVoiceSetup);
             Controls.Add(btnUserManage);
             Controls.Add(btnOrderCenter);
@@ -419,5 +434,6 @@
         private Sunny.UI.UIButton btnOrderCenter;
         private Sunny.UI.UIButton btnUserManage;
         private Sunny.UI.UIButton btnSysVoiceSetup;
+        private Sunny.UI.UIButton btnSysLog;
     }
 }

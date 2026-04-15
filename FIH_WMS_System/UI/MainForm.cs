@@ -348,7 +348,8 @@ namespace FIH_WMS_System
             ContextMenuStrip stockMenu = new ContextMenuStrip();
 
             ToolStripMenuItem freezeItem = new ToolStripMenuItem("🔒 冻结该批次库存 (拦截出库)");
-            freezeItem.Click += (s, ev) => {
+            freezeItem.Click += (s, ev) =>
+            {
                 if (dataGridView1.SelectedRows.Count > 0)
                 {
                     int stockId = Convert.ToInt32(dataGridView1.SelectedRows[0].Cells["库存编号"].Value);
@@ -359,7 +360,8 @@ namespace FIH_WMS_System
             };
 
             ToolStripMenuItem unfreezeItem = new ToolStripMenuItem("🔓 解除冻结 (恢复可用)");
-            unfreezeItem.Click += (s, ev) => {
+            unfreezeItem.Click += (s, ev) =>
+            {
                 if (dataGridView1.SelectedRows.Count > 0)
                 {
                     int stockId = Convert.ToInt32(dataGridView1.SelectedRows[0].Cells["库存编号"].Value);
@@ -631,6 +633,18 @@ namespace FIH_WMS_System
         private void btnSysVoiceSetup_Click(object sender, EventArgs e)
         {
             new UI.SettingsForm().ShowDialog();
+        }
+
+        private void btnSysLog_Click(object sender, EventArgs e)
+        {
+            if (Program.CurrentRole == "操作员")
+            {
+                MessageBox.Show("🚫 权限不足：只有系统管理员可以查看安全审计日志！", "拒绝访问", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
+            UI.SysLogForm form = new UI.SysLogForm();
+            form.ShowDialog();
         }
     }
 }

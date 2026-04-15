@@ -20,6 +20,10 @@ namespace FIH_WMS_System.UI
         public AgvMonitorForm()
         {
             InitializeComponent();
+
+            // 把绑定菜单的代码放在这里
+            // InitializeComponent() 执行完后，dgvTasks 就被创建出来了
+            this.dgvTasks.ContextMenuStrip = this.menuAgv;
         }
 
         private void AgvMonitorForm_Load(object sender, EventArgs e)
@@ -28,6 +32,24 @@ namespace FIH_WMS_System.UI
             timer1.Interval = Program.AgvRefreshInterval;
             LoadData();
         }
+
+
+
+        ////要让用户在 AgvMonitorForm（AGV 监控台）里，右键点击某个任务，就能直接跳出对应的日志。
+        private void menuViewTrace_Click(object sender, EventArgs e)
+        {
+            if (dgvTasks.CurrentRow == null) return;
+
+            // 获取选中的任务单号
+            string taskNo = dgvTasks.CurrentRow.Cells["TaskNo"].Value.ToString();
+
+            // 弹出轨迹窗口，并自动过滤该单号
+            AgvLogForm traceForm = new AgvLogForm(taskNo);
+            traceForm.ShowDialog();
+        }
+
+
+
 
         private void btnRefresh_Click(object sender, EventArgs e)
         {
@@ -86,7 +108,21 @@ namespace FIH_WMS_System.UI
             if (dgvTasks.Columns[e.ColumnIndex].Name == "TaskType" && e.Value != null)
             {
                 int type = (int)e.Value;
-                e.Value = type == 1 ? "出库/产线备料" : "内部移库合并";
+                //e.Value = type == 1 ? "出库/产线备料" : "内部移库合并";
+
+
+
+                if (type == 1) e.Value = "📤 出库/产线备料";
+                else if (type == 0) e.Value = "📥 入库/产线退料";
+                else if (type == 2) e.Value = "🔄 内部移库合并";
+                else if (type == 3)
+                {
+                    e.Value = "🔋 空闲自动回充/待命";
+                    e.CellStyle.ForeColor = Color.MediumSeaGreen; // 充电任务用绿色标出
+                }
+
+
+
                 e.FormattingApplied = true;
             }
         }

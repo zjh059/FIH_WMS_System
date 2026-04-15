@@ -2,6 +2,9 @@
 {
     partial class AgvMonitorForm
     {
+        private System.Windows.Forms.ContextMenuStrip menuAgv;
+        private System.Windows.Forms.ToolStripMenuItem menuViewTrace;
+
         private System.ComponentModel.IContainer components = null;
 
         protected override void Dispose(bool disposing)
@@ -12,6 +15,23 @@
 
         private void InitializeComponent()
         {
+            //初始化 components 容器！
+            this.components = new System.ComponentModel.Container();
+
+            //要让用户在 AgvMonitorForm（AGV 监控台）里，右键点击某个任务，就能直接跳出对应的日志。
+            //实例化并绑定
+            this.menuAgv = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.menuViewTrace = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuAgv.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.menuViewTrace });
+            this.menuViewTrace.Text = "🔍 查看该任务运行轨迹";
+            this.menuViewTrace.Click += new System.EventHandler(this.menuViewTrace_Click);
+
+            // 将菜单绑定到表格
+            //this.dgvTasks.ContextMenuStrip = this.menuAgv;
+            //转到业务层去了
+
+
+
             components = new System.ComponentModel.Container();
             dgvTasks = new DataGridView();
             btnRefresh = new Button();

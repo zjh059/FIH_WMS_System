@@ -34,7 +34,9 @@ namespace FIH_WMS_System.Services
         /// <summary>
         /// 4. 按就近库位原则入库 (根据库位编码顺序分配，减少AGV或人工走动时间)
         /// </summary>
-        NearestFirst = 4
+        NearestFirst = 4,
+
+        UsageFrequency = 5 // 新增：按使用频率入库 (智能冷热分区)
     }
 
     /// <summary>
@@ -78,6 +80,10 @@ namespace FIH_WMS_System.Services
                     // 【修改此处】：传入 agvX, agvY
                     //return GetNearestLocation(validLocations, currentStocks);
                     return GetNearestLocation(agvX, agvY, validLocations, currentStocks);
+
+                //冷热分区策略：根据物料的使用频率（出库频率）来决定入库位置，常用的放在更靠近出口的位置，减少后续出库时间
+                case InboundStrategy.UsageFrequency:
+                    return GetLocationByUsageFrequency(goodsCode, agvX, agvY, validLocations, currentStocks);
 
                 case InboundStrategy.Manual:
                 default:
@@ -140,8 +146,46 @@ namespace FIH_WMS_System.Services
                 .FirstOrDefault();
             return nearestLocation;
         }
+
+        /// <summary>
+        /// 策略 D：按使用频率 (冷热物料智能分区) 分配库位
+        /// 高频物料优先放门口，低频物料发配到仓库最深处
+        /// </summary>
+        private Location GetLocationByUsageFrequency(string goodsCode, int agvX, int agvY, List<Location> validLocations, List<Stock> currentStocks)
+        {
+            // 1. 大数据分析：去流水账表里查该物料最近 30 天的出入库总次数 (定义为“热度”)
+            var thirtyDaysAgo = DateTime.Now.AddDays(-30);
+
+            // 利用全局 DbHelper 直接统计该物料的操作频次
+            int usageCount = FIH_WMS_System.Utils.DbHelper.Db.Queryable<StockRecord>()
+                .Where(r => r.GoodsCode == goodsCode && r.OperateTime >= thirtyDaysAgo)
+                .Count();
+
+            // 2. 找出所有纯空的库位作为候选目标
+            var occupiedLocationCodes = currentStocks.Where(s => s.Qty > 0).Select(s => s.LocationCode).Distinct().ToList();
+            var emptyLocations = validLocations.Where(loc => !occupiedLocationCodes.Contains(loc.Code)).ToList();
+
+            if (emptyLocations.Count == 0) return null; // 仓库没有纯空位了
+
+            // 3. 智能判断：以 30天内 10 次为界限划分冷热物料
+            if (usageCount > 10)
+            {
+                // 🔥 热物料 (高频)：按距离【升序】排列，取离起点 (agvX, agvY) 【最近】的空库位
+                return emptyLocations
+                    .OrderBy(loc => Math.Pow(loc.PosX - agvX, 2) + Math.Pow(loc.PosY - agvY, 2))
+                    .FirstOrDefault();
+            }
+            else
+            {
+                // 🧊 冷物料 (低频)：按距离【降序】排列，把它发配到离起点【最远】的深处角落
+                return emptyLocations
+                    .OrderByDescending(loc => Math.Pow(loc.PosX - agvX, 2) + Math.Pow(loc.PosY - agvY, 2))
+                    .FirstOrDefault();
+            }
+        }
+
+
+
     }
-
-
 
 }

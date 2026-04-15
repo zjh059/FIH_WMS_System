@@ -44,8 +44,11 @@ namespace FIH_WMS_System.UI
                 Program.CurrentUsername = loginUser.Username;
                 Program.CurrentRole = loginUser.Role;
 
-                // 👇 触发语音播报
+                //  触发语音播报
                 Utils.VoiceHelper.Speak($"欢迎回来，{loginUser.Role}，{loginUser.Username}！");
+
+                // 记录登录日志
+                wms.AddOperationLog("系统登录", $"账号登录成功，角色：{loginUser.Role}");
 
                 this.DialogResult = DialogResult.OK; // 告诉系统登录过关了
             }

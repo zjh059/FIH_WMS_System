@@ -620,18 +620,91 @@ namespace FIH_WMS_System.Services
         // ==========================================
         // 9. 模拟 AGV 小车完成任务反馈
         // ==========================================
+        //public bool CompleteAgvTask(int taskId)
+        //{
+        //    using (var db = new SqlConnection(connStr))
+        //    {
+        //        // 将状态更新为 3 (已完成)，并打上完成时间戳
+        //        int rows = db.Execute(@"
+        //            UPDATE AgvTask 
+        //            SET Status = 3, FinishTime = GETDATE() 
+        //            WHERE Id = @id AND Status != 3",
+        //            new { id = taskId });
+
+        //        return rows > 0; // 如果受影响的行数大于0，说明更新成功
+        //    }
+        //}
+
+        // ==========================================
+        // 9. 模拟 AGV 小车完成任务反馈 (闭环升级)
+        // ==========================================
         public bool CompleteAgvTask(int taskId)
         {
-            using (var db = new SqlConnection(connStr))
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
-                // 将状态更新为 3 (已完成)，并打上完成时间戳
-                int rows = db.Execute(@"
-                    UPDATE AgvTask 
-                    SET Status = 3, FinishTime = GETDATE() 
-                    WHERE Id = @id AND Status != 3",
-                    new { id = taskId });
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. 查出当前正在跑的任务信息
+                        var task = Dapper.SqlMapper.QueryFirstOrDefault<AgvTask>(db,
+                            "SELECT * FROM AgvTask WHERE Id = @id", new { id = taskId }, transaction);
 
-                return rows > 0; // 如果受影响的行数大于0，说明更新成功
+                        if (task == null || task.Status == 3) return false;
+
+                        // 2. 更新原任务为已完成
+                        Dapper.SqlMapper.Execute(db, @"
+                            UPDATE AgvTask SET Status = 3, FinishTime = GETDATE() WHERE Id = @id",
+                            new { id = taskId }, transaction);
+
+                        // 3. 记录小车到达终点的日志
+                        Dapper.SqlMapper.Execute(db, "INSERT INTO AgvLog (TaskNo, Action, Location, LogTime) VALUES (@t, @a, @l, GETDATE())",
+                            new { t = task.TaskNo, a = "✅ 任务完成，卸载货物", l = task.ToLocation }, transaction);
+
+                        // 4. 【核心智能联动】：如果这不是一个回充任务，那么送完货后，立刻派它去充电桩或待命区！
+                        // 规定 TaskType: 0入库, 1出库, 2移库, 3自动回充
+                        if (task.TaskType != 3)
+                        {
+                            string newChargeTaskNo = "AGV-CHG-" + DateTime.Now.ToString("HHmmss");
+
+                            Dapper.SqlMapper.Execute(db, @"
+                                INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) 
+                                VALUES (@tNo, 3, 0, '无(空载)', 0, @fromLoc, 'C区-充电接驳站', GETDATE())",
+                                new { tNo = newChargeTaskNo, fromLoc = task.ToLocation }, transaction);
+
+                            // 记录回程指令日志
+                            Dapper.SqlMapper.Execute(db, "INSERT INTO AgvLog (TaskNo, Action, Location, LogTime) VALUES (@t, @a, @l, GETDATE())",
+                                new { t = newChargeTaskNo, a = "🔋 触发空闲自动回充指令", l = task.ToLocation }, transaction);
+                        }
+                        else
+                        {
+                            // 如果它本身就是回充任务，说明它现在已经到达充电桩了
+                            Dapper.SqlMapper.Execute(db, "INSERT INTO AgvLog (TaskNo, Action, Location, LogTime) VALUES (@t, @a, @l, GETDATE())",
+                                new { t = task.TaskNo, a = "⚡ 到达充电站，开始充电", l = task.ToLocation }, transaction);
+                        }
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 供外部主动记录 AGV 日志的通用接口
+        // ==========================================
+        public void AddAgvLog(string taskNo, string action, string location)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                Dapper.SqlMapper.Execute(db, "INSERT INTO AgvLog (TaskNo, Action, Location, LogTime) VALUES (@t, @a, @l, GETDATE())",
+                    new { t = taskNo, a = action, l = location });
             }
         }
 
@@ -1234,6 +1307,10 @@ namespace FIH_WMS_System.Services
                 //插入语句加上 ShelfLifeDays
                 db.Execute("INSERT INTO Goods (Code, Name, Spec, Category, Brand, SafeQty, ShelfLifeDays) VALUES (@c, @n, @s, @cat, @b, 0, @shelf)",
                     new { c = code, n = name, s = spec, cat = category, b = brand, shelf = shelfLifeDays });
+
+                //记录日志
+                AddOperationLog("基础数据", $"新增了物料档案：【{name}】(编码:{code})");
+
                 return true;
             }
         }
@@ -1347,6 +1424,10 @@ namespace FIH_WMS_System.Services
             using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
                 db.Execute("UPDATE Location SET Status = @s WHERE Code = @c", new { s = newStatus, c = locCode });
+
+                // 记录日志
+                string statusName = newStatus == 1 ? "锁定停用" : "解除锁定(恢复正常)";
+                AddOperationLog("库位管理", $"将库位【{locCode}】的状态修改为：{statusName}");
             }
         }
 
@@ -1579,6 +1660,10 @@ namespace FIH_WMS_System.Services
 
                 db.Execute("INSERT INTO Users (Username, Password, Role) VALUES (@u, @p, @r)",
                     new { u = username, p = password, r = role });
+
+                //记录日志
+                AddOperationLog("权限管理", $"新增了系统账号：【{username}】，角色为：{role}");
+
                 return true;
             }
         }
@@ -1591,6 +1676,9 @@ namespace FIH_WMS_System.Services
             using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
                 db.Execute("UPDATE Users SET Password = @p WHERE Id = @id", new { p = newPassword, id = userId });
+
+                //记录日志
+                AddOperationLog("权限管理", $"将用户编号为 【{userId}】 的密码重置为初始密码");
             }
         }
 
@@ -1602,6 +1690,9 @@ namespace FIH_WMS_System.Services
             using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
             {
                 db.Execute("DELETE FROM Users WHERE Id = @id", new { id = userId });
+
+                //记录日志
+                AddOperationLog("权限管理", $"永久删除了用户编号为 【{userId}】 的账号");
             }
         }
 
@@ -1623,6 +1714,11 @@ namespace FIH_WMS_System.Services
                     // 🔓 解除冻结（冻结数量清零）
                     db.Execute("UPDATE Stock SET FrozenQty = 0 WHERE Id = @id", new { id = stockId });
                 }
+
+                // 记录日志
+                string actionName = isFreeze ? "全数冻结" : "解除冻结";
+                AddOperationLog("库存管理", $"{actionName}了系统库存ID：【{stockId}】");
+
                 return true;
             }
         }
@@ -1671,6 +1767,87 @@ namespace FIH_WMS_System.Services
 
                 // 直接用 Dapper 返回 dynamic 列表，前台拆解
                 return Dapper.SqlMapper.Query(db, sql).ToList();
+            }
+        }
+
+
+        // ==========================================
+        // 审计功能：记录系统操作日志
+        // ==========================================
+        public void AddOperationLog(string actionType, string description)
+        {
+            // 如果还没登录（比如登录失败的尝试），或者拿不到用户名，就记作 System 或 Unknown
+            string currentUser = string.IsNullOrEmpty(Program.CurrentUsername) ? "System" : Program.CurrentUsername;
+
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                string sql = @"INSERT INTO SysOperationLog (Username, ActionType, Description, OperateTime) 
+                               VALUES (@u, @a, @d, GETDATE())";
+
+                Dapper.SqlMapper.Execute(db, sql, new
+                {
+                    u = currentUser,
+                    a = actionType,
+                    d = description
+                });
+            }
+        }
+
+
+        // ==========================================
+        // 审计功能：获取所有系统操作日志
+        // ==========================================
+        public System.Data.DataTable GetOperationLogs()
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                var dt = new System.Data.DataTable();
+                // 按时间倒序，最新的操作排在最上面
+                string sql = @"
+                    SELECT 
+                        Id AS 日志编号, 
+                        Username AS 操作人账号, 
+                        ActionType AS 操作模块, 
+                        Description AS 详细操作记录, 
+                        OperateTime AS 操作时间 
+                    FROM SysOperationLog 
+                    ORDER BY OperateTime DESC";
+
+                var reader = Dapper.SqlMapper.ExecuteReader(db, sql);
+                dt.Load(reader);
+                return dt;
+            }
+        }
+
+
+        // ==========================================
+        // 获取 AGV 运行轨迹日志
+        // 可以按任务单号过滤，也可以查询全部
+        // ==========================================
+        public System.Data.DataTable GetAgvLogs(string taskNo = "")
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                var dt = new System.Data.DataTable();
+                string sql = @"
+            SELECT 
+                Id AS 序号, 
+                TaskNo AS 任务单号, 
+                Action AS 动作描述, 
+                Location AS 当前位置, 
+                LogTime AS 记录时间 
+            FROM AgvLog ";
+
+                if (!string.IsNullOrEmpty(taskNo))
+                {
+                    sql += " WHERE TaskNo = @t ";
+                }
+
+                sql += " ORDER BY LogTime DESC";
+
+                var reader = Dapper.SqlMapper.ExecuteReader(db, sql, new { t = taskNo });
+                dt.Load(reader);
+                return dt;
             }
         }
 

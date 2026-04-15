@@ -30,6 +30,9 @@ namespace FIH_WMS_System.UI
             else if (cmbAgvSpeed.SelectedIndex == 1) Program.AgvRefreshInterval = 3000;
             else Program.AgvRefreshInterval = 5000;
 
+            // 记录系统参数修改日志
+            new Services.WmsService().AddOperationLog("系统设置", $"修改了全局参数 (语音开启:{chkVoice.Checked})");
+
             MessageBox.Show("系统参数已保存并实时生效！", "保存成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             this.Close();
         }
