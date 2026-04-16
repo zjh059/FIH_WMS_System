@@ -1,11 +1,25 @@
 //地址：
 //D:\$Programs\MethodLogic_Lab\FIH_WMS_System\FIH_WMS_System\bin\Debug\net8.0-windows\Langs
 //下进行找和修改，再在这里进行改回
+//此处仅为参考！
 
+
+//让新打开的窗口也能自动翻译
+//以后每一个子窗体（比如 SysLogForm.cs、DashboardForm.cs、InStockForm.cs 等），都要在它的 _Load 事件最后，加上一句翻译代码
+//private void SysLogForm_Load(object sender, EventArgs e)
+//{
+//   ... (原来的美化表格和 LoadLogData 等代码)
+//  "LoadLogData();"
+
+//   新增这一句，每次打开这个新窗口时，告诉系统给它刷一层当前语言的漆！
+//  "Utils.LanguageHelper.TranslateForm(this);"
+//}
 
 
 {
-  "FIH 智能仓储管理系统 - 当前登录：【t】 (管理员)": "FIH 智能倉儲管理系統 - 當前登入：【t】 (管理員)",
+  "FIH 智能仓储管理系统 - 当前登录：": "FIH 智能倉儲管理系統 - 當前登入：",
+  "管理员": "管理員",
+  "操作员": "操作員",
   "🔄 简/繁/英": "🔄 簡/繁/英",
   "🛡️ 系统日志": "🛡️ 系統日誌",
   "⚙️ 系统参数设置": "⚙️ 系統參數設定",

@@ -27,7 +27,17 @@ namespace FIH_WMS_System
         private void MainForm_Load(object sender, EventArgs e)
         {
             // 1. 左上角的标题栏显示当前登录人的名字和身份
-            this.Text = $"FIH 智能仓储管理系统 - 当前登录：【{Program.CurrentUsername}】 ({Program.CurrentRole})";
+            //this.Text = $"FIH 智能仓储管理系统 - 当前登录：【{Program.CurrentUsername}】 ({Program.CurrentRole})";
+
+            // 1. 将静态文字和角色名，给语言助手翻译
+            string titlePrefix = Utils.LanguageHelper.GetString("FIH 智能仓储管理系统 - 当前登录：");
+            string translatedRole = Utils.LanguageHelper.GetString(Program.CurrentRole);
+
+            // 2. 将翻译后的文字，和不会变的账号名(CurrentUsername) 重新拼接起来！
+            this.Text = $"{titlePrefix}【{Program.CurrentUsername}】 ({translatedRole})";
+
+
+
 
             //把表格的锚点钉死在上下左右四个边
             // 这样只要窗口一拉伸，表格就会填满空白区域
@@ -93,6 +103,7 @@ namespace FIH_WMS_System
             }
 
 
+            Utils.LanguageHelper.TranslateForm(this);
         }
         private void btnLogout_Click(object sender, EventArgs e) // 假设你的按钮叫 btnLogout，请以你实际双击出来的名字为准
         {
@@ -665,8 +676,11 @@ namespace FIH_WMS_System
                 nextLang = "zh-CN"; // 英 -> 简
             }
 
-            // 2. 让大脑加载新的语言包
+            // 2. 加载新的语言包
             Utils.LanguageHelper.LoadLanguage(nextLang);
+
+            //修复 1：在扫描整个窗体前，先把主界面的标题重置为最基础的静态文本，防止长句子被误抓
+            this.Text = "FIH 智能仓储管理系统";
 
             // 3. 核心：瞬间刷新当前打开的所有窗口！
             // Application.OpenForms 包含了当前屏幕上显示的所有窗体
@@ -674,6 +688,17 @@ namespace FIH_WMS_System
             {
                 Utils.LanguageHelper.TranslateForm(form);
             }
+
+            // --- 核心修复：强制重刷主窗体标题 ---
+            UpdateMainTitle();
+
+            //修复 2：全窗体翻译完成后，手动获取翻译好的前缀和角色，重新把标题拼回去
+            string titlePrefix = Utils.LanguageHelper.GetString("FIH 智能仓储管理系统 - 当前登录：");
+            string translatedRole = Utils.LanguageHelper.GetString(Program.CurrentRole);
+            this.Text = $"{titlePrefix}【{Program.CurrentUsername}】 ({translatedRole})";
+
+
+
 
             // 4.加个专属的语音播报
             if (nextLang == "en-US")
@@ -688,6 +713,17 @@ namespace FIH_WMS_System
             {
                 Utils.VoiceHelper.Speak("已切换为简体中文");
             }
+        }
+
+        // 以下为拼接标题的代码
+        private void UpdateMainTitle()
+        {
+            // 从字典里拿翻译好的前缀和角色
+            string titlePrefix = Utils.LanguageHelper.GetString("FIH 智能仓储管理系统 - 当前登录：");
+            string translatedRole = Utils.LanguageHelper.GetString(Program.CurrentRole);
+
+            // 重新组合并赋值给 Text
+            this.Text = $"{titlePrefix}【{Program.CurrentUsername}】 ({translatedRole})";
         }
 
 

@@ -25,26 +25,65 @@ namespace FIH_WMS_System.Utils
         /// <summary>
         /// 加载指定语言包 (如 "en-US", "zh-TW")
         /// </summary>
+        //public static void LoadLanguage(string langCode)
+        //{
+        //    CurrentLang = langCode;
+
+        //    // 若是简中，直接清空字典（因为此代码和UI本为简中）
+        //    if (langCode == "zh-CN")
+        //    {
+        //        _dict.Clear();
+        //        return;
+        //    }
+
+        //    // 读取对应的 JSON 文件 (程序根目录下 Langs 文件夹)
+        //    string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Langs", $"{langCode}.json");
+
+        //    if (File.Exists(filePath))
+        //    {
+        //        string json = File.ReadAllText(filePath);
+        //        _dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+        //    }
+        //}
+
+
+        /// <summary>
+        /// 加载指定语言包
+        /// </summary>
         public static void LoadLanguage(string langCode)
         {
             CurrentLang = langCode;
 
-            // 若是简中，直接清空字典（因为此代码和UI本为简中）
             if (langCode == "zh-CN")
             {
                 _dict.Clear();
                 return;
             }
 
-            // 读取对应的 JSON 文件 (程序根目录下 Langs 文件夹)
             string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Langs", $"{langCode}.json");
 
             if (File.Exists(filePath))
             {
-                string json = File.ReadAllText(filePath);
-                _dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                try
+                {
+                    string json = File.ReadAllText(filePath);
+                    _dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new Dictionary<string, string>();
+                }
+                catch (Exception ex)
+                {
+                    // 👇 核心防呆：如果 JSON 少了逗号或写错了，立刻弹窗告诉你！
+                    MessageBox.Show($"语言包 {langCode}.json 格式错误！请检查标点符号。\n详细报错：{ex.Message}",
+                        "语言包加载失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                MessageBox.Show($"找不到语言包文件：\n{filePath}", "文件缺失", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+
+
+
 
         /// <summary>
         /// 翻译单个字符串
@@ -109,35 +148,36 @@ namespace FIH_WMS_System.Utils
         {
             foreach (Control ctrl in controls)
             {
-                // 翻译控件显示的文本 (按钮、Label、TextBox的提示等)
-                if (!string.IsNullOrWhiteSpace(ctrl.Text))
+                // --- 修改：Tag 备份逻辑 ---
+                // 若此控件未有备份过原始文字，把当前 Text 存进 Tag 
+                if (ctrl.Tag == null || string.IsNullOrWhiteSpace(ctrl.Tag.ToString()))
                 {
-                    ctrl.Text = GetString(ctrl.Text);
+                    // 只有当 Text 不为空时才备份，避免把空字符串存进去
+                    if (!string.IsNullOrWhiteSpace(ctrl.Text))
+                    {
+                        ctrl.Tag = ctrl.Text;
+                    }
                 }
 
-                // 如果是特殊控件：DataGridView 表头
+                // 从 Tag 中获取最原始简中进行翻译
+                if (ctrl.Tag != null)
+                {
+                    string originalText = ctrl.Tag.ToString();
+                    ctrl.Text = GetString(originalText);
+                }
+
+                // DataGridView 的表头特殊处理
                 if (ctrl is DataGridView dgv)
                 {
                     foreach (DataGridViewColumn col in dgv.Columns)
                     {
+                        // 表头没有 Tag，可利用 DataPropertyName 或者 HeaderText 自身
+                        // 在开发时确保 HeaderText 初始为中文
                         col.HeaderText = GetString(col.HeaderText);
                     }
                 }
 
-                // 如果是特殊控件：ComboBox 下拉框
-                // (如果你的下拉框绑定了对象，这里可能需要根据实际情况调整，如果是纯文本Items则可以直接翻译)
-                if (ctrl is ComboBox cmb && cmb.DataSource == null)
-                {
-                    for (int i = 0; i < cmb.Items.Count; i++)
-                    {
-                        if (cmb.Items[i] is string strItem)
-                        {
-                            cmb.Items[i] = GetString(strItem);
-                        }
-                    }
-                }
-
-                // 递归翻译子控件 (如 Panel, GroupBox 里面的控件)
+                // 递归处理子控件
                 if (ctrl.HasChildren)
                 {
                     TranslateControls(ctrl.Controls);

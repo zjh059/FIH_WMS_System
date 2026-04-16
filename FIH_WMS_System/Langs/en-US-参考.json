@@ -1,0 +1,91 @@
+//修改地址：
+//D:\$Programs\MethodLogic_Lab\FIH_WMS_System\FIH_WMS_System\bin\Debug\net8.0-windows\Langs
+//下进行找和修改，再在这里进行改回
+//此处仅为参考！
+
+
+//让新打开的窗口也能自动翻译
+//以后每一个子窗体（比如 SysLogForm.cs、DashboardForm.cs、InStockForm.cs 等），都要在它的 _Load 事件最后，加上一句翻译代码
+//private void SysLogForm_Load(object sender, EventArgs e)
+//{
+//   ... (原来的美化表格和 LoadLogData 等代码)
+//  "LoadLogData();"
+
+//   新增这一句，每次打开这个新窗口时，告诉系统给它刷一层当前语言的漆！
+//  "Utils.LanguageHelper.TranslateForm(this);"
+//}
+
+{
+  "FIH 智能仓储管理系统 - 当前登录：": "FIH Smart WMS - Current User: ",
+  "FIH 智能倉儲管理系統 - 當前登入：": "FIH Smart WMS - Current User: ",
+  "管理员": "Admin",
+  "管理員": "Admin",
+  "操作员": "Operator",
+  "操作員": "Operator",
+
+  "🔄 简/繁/英": "🔄 EN/简/繁",
+  "🔄 簡/繁/英": "🔄 EN/简/繁",
+
+  "🛡️ 系统日志": "🛡️ System Logs",
+  "🛡️ 系統日誌": "🛡️ System Logs",
+
+  "⚙️ 系统参数设置": "⚙️ System Settings",
+  "⚙️ 系統參數設定": "⚙️ System Settings",
+
+  "👤 系统权限与账号": "👤 Users & Roles",
+  "👤 系統權限與帳號": "👤 Users & Roles",
+
+  "📑 单据管理中心": "📑 Order Center",
+  "📑 單據管理中心": "📑 Order Center",
+
+  "🌊 波次出库": "🌊 Wave Picking",
+  "🌊 波次出庫": "🌊 Wave Picking",
+
+  "🔄 产线返料": "🔄 Line Return",
+  "🔄 產線返料": "🔄 Line Return",
+
+  "⚙️ 基础数据管理": "⚙️ Master Data",
+  "⚙️ 基礎數據管理": "⚙️ Master Data",
+
+  "AGV 监控台": "AGV Monitor",
+  "AGV 監控台": "AGV Monitor",
+
+  "💾 导出当前数据至 Excel": "💾 Export to Excel",
+  "💾 匯出當前數據至 Excel": "💾 Export to Excel",
+
+  "🔙 系统登出": "🔙 Logout",
+  "🔙 系統登出": "🔙 Logout",
+
+  "🗺️ 2D库位监控": "🗺️ 2D Map Monitor",
+  "🗺️ 2D庫位監控": "🗺️ 2D Map Monitor",
+
+  "📈数据大屏看板": "📈 Dashboard",
+  "📈數據大屏看板": "📈 Dashboard",
+
+  "✅ 模拟小车到达 (AVG完成任务)": "✅ Simulate AGV Arrival",
+  "✅ 模擬小車到達 (AGV完成任務)": "✅ Simulate AGV Arrival",
+
+  "🚗AGV调度中心": "🚗 AGV Dispatch Center",
+  "🚗AGV調度中心": "🚗 AGV Dispatch Center",
+
+  "📋 库存盘点": "📋 Stock Count",
+  "📋 庫存盤點": "📋 Stock Count",
+
+  "🔄 库位移库": "🔄 Stock Transfer",
+  "🔄 庫位移庫": "🔄 Stock Transfer",
+
+  "📝 流水记录": "📝 Transaction Logs",
+  "📝 流水記錄": "📝 Transaction Logs",
+
+  "📊 库存查询": "📊 Stock Query",
+  "📊 庫存查詢": "📊 Stock Query",
+
+  "📤 物料出库": "📤 Outbound",
+  "📤 物料出庫": "📤 Outbound",
+
+  "📥 物料入库": "📥 Inbound",
+  "📥 物料入庫": "📥 Inbound",
+
+  "FIH 智能仓储管理系统": "FIH Smart WMS",
+  "FIH 智能倉儲管理系統": "FIH Smart WMS"
+}
