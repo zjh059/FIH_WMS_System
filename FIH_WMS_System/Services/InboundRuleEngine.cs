@@ -94,7 +94,13 @@ namespace FIH_WMS_System.Services
                 //新增：按物料分类、规格等特征集中存放的策略分支
                 // 如果同类物料的货架都满了，就找一个纯空的新库位开辟新领地
                 case InboundStrategy.ByCategory:
-                    return GetLocationByCategory(goodsCode, inQty, validLocations, currentStocks);
+                    //return GetLocationByCategory(goodsCode, inQty, validLocations, currentStocks);
+                    //替换为多维度匹配方法
+                    return GetLocationByMultiDimensions(goodsCode, inQty, validLocations, currentStocks);
+
+                //  新增波次入库方法
+                case InboundStrategy.ByWave:
+                    return GetLocationByWave(goodsCode, validLocations, currentStocks);
 
 
 
@@ -197,47 +203,129 @@ namespace FIH_WMS_System.Services
             }
         }
 
+        ///// <summary>
+        ///// 策略 E：按物料分类集中存放 (同类分区策略)
+        ///// 核心逻辑：检索待入库物料所属分类，优先将其分配至已存放同类物料的非满载库位；若无，则分配至空库位。
+        ///// </summary>
+        ///// <param name="goodsCode">待入库的物料编码</param>
+        ///// <param name="inQty">本次计划入库数量</param>
+        ///// <param name="validLocations">当前状态正常的可用库位集合</param>
+        ///// <param name="currentStocks">当前系统的实时库存快照</param>
+        ///// <returns>符合同类集中原则的目标库位，若无合适库位则返回首个空库位</returns>
+        //private Location GetLocationByCategory(string goodsCode, int inQty, List<Location> validLocations, List<Stock> currentStocks)
+        //{
+        //    // 1. 获取当前待入库物料的完整档案信息 (提取分类特征)
+        //    var currentGoods = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>().Where(g => g.Code == goodsCode).First();
+
+        //    // 容错处理：若该物料未维护分类信息，则直接降级为“寻找空库位”策略
+        //    if (currentGoods == null || string.IsNullOrEmpty(currentGoods.Category))
+        //    {
+        //        return GetEmptyLocation(validLocations, currentStocks);
+        //    }
+
+        //    // 2. 检索系统中所有隶属于同一分类的物料编码集合
+        //    var sameCategoryGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>()
+        //        .Where(g => g.Category == currentGoods.Category)
+        //        .Select(g => g.Code)
+        //        .ToList();
+
+        //    // 3. 筛选当前库存中，存放了这些同类物料的有效库存记录
+        //    var categoryStocks = currentStocks.Where(s => sameCategoryGoodsCodes.Contains(s.GoodsCode) && s.Qty > 0).ToList();
+
+        //    // 提取同类物料目前占用的所有库位编码 (去重)
+        //    var occupiedLocationCodes = categoryStocks.Select(s => s.LocationCode).Distinct().ToList();
+
+        //    // 4. 在状态正常的可用库位中寻找目标：
+        //    // 条件A：必须是同类物料所在的库位 (聚集效应)
+        //    // 条件B：该库位的当前总存量 + 本次入库量 <= 库位最大容量 (防爆仓校验)
+        //    var targetLocation = validLocations.FirstOrDefault(loc =>
+        //        occupiedLocationCodes.Contains(loc.Code) &&
+        //        (currentStocks.Where(s => s.LocationCode == loc.Code).Sum(s => s.Qty) + inQty) <= loc.MaxCapacity);
+
+        //    // 5. 最终决策：若找到了满足条件的同类库位，则返回之；若同类库位均已满载，则开辟一个新的空库位
+        //    return targetLocation ?? GetEmptyLocation(validLocations, currentStocks);
+        //}
+
         /// <summary>
-        /// 策略 E：按物料分类集中存放 (同类分区策略)
-        /// 核心逻辑：检索待入库物料所属分类，优先将其分配至已存放同类物料的非满载库位；若无，则分配至空库位。
+        /// 策略 E (完全版)：多维度特征识别集中存放 (同类分区策略)
+        /// 对应文档：通过物料reelId识别，按物料分类、规格、品牌、用途、有效期等分类入库
         /// </summary>
-        /// <param name="goodsCode">待入库的物料编码</param>
-        /// <param name="inQty">本次计划入库数量</param>
-        /// <param name="validLocations">当前状态正常的可用库位集合</param>
-        /// <param name="currentStocks">当前系统的实时库存快照</param>
-        /// <returns>符合同类集中原则的目标库位，若无合适库位则返回首个空库位</returns>
-        private Location GetLocationByCategory(string goodsCode, int inQty, List<Location> validLocations, List<Stock> currentStocks)
+        private Location GetLocationByMultiDimensions(string goodsCode, int inQty, List<Location> validLocations, List<Stock> currentStocks)
         {
-            // 1. 获取当前待入库物料的完整档案信息 (提取分类特征)
+            // 1. 获取当前待入库物料的完整档案信息
             var currentGoods = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>().Where(g => g.Code == goodsCode).First();
 
-            // 容错处理：若该物料未维护分类信息，则直接降级为“寻找空库位”策略
-            if (currentGoods == null || string.IsNullOrEmpty(currentGoods.Category))
-            {
-                return GetEmptyLocation(validLocations, currentStocks);
-            }
+            if (currentGoods == null) return GetEmptyLocation(validLocations, currentStocks);
 
-            // 2. 检索系统中所有隶属于同一分类的物料编码集合
-            var sameCategoryGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>()
-                .Where(g => g.Category == currentGoods.Category)
+            // 2. 核心：多维度相似度匹配！不仅仅看分类，还看品牌、规格、保质期
+            // 只要满足其中任意一个核心维度相同（且不为空），我们就认为它们是“同类特征物料”
+            var similarGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>()
+                .Where(g =>
+                    (g.Category == currentGoods.Category && !string.IsNullOrEmpty(currentGoods.Category)) ||
+                    (g.Brand == currentGoods.Brand && !string.IsNullOrEmpty(currentGoods.Brand)) ||
+                    (g.Spec == currentGoods.Spec && !string.IsNullOrEmpty(currentGoods.Spec)) ||
+                    (g.ShelfLifeDays == currentGoods.ShelfLifeDays && currentGoods.ShelfLifeDays > 0)
+                )
                 .Select(g => g.Code)
                 .ToList();
 
-            // 3. 筛选当前库存中，存放了这些同类物料的有效库存记录
-            var categoryStocks = currentStocks.Where(s => sameCategoryGoodsCodes.Contains(s.GoodsCode) && s.Qty > 0).ToList();
+            // 如果连一个相似特征的都没有，退化为找空库位
+            if (similarGoodsCodes.Count == 0) return GetEmptyLocation(validLocations, currentStocks);
 
-            // 提取同类物料目前占用的所有库位编码 (去重)
-            var occupiedLocationCodes = categoryStocks.Select(s => s.LocationCode).Distinct().ToList();
+            // 3. 筛选当前库存中，存放了这些“相似物料”的有效记录，提取它们目前占用的库位
+            var similarStocks = currentStocks.Where(s => similarGoodsCodes.Contains(s.GoodsCode) && s.Qty > 0).ToList();
+            var occupiedLocationCodes = similarStocks.Select(s => s.LocationCode).Distinct().ToList();
 
             // 4. 在状态正常的可用库位中寻找目标：
-            // 条件A：必须是同类物料所在的库位 (聚集效应)
+            // 条件A：必须是相似物料所在的库位 (多维度聚集效应)
             // 条件B：该库位的当前总存量 + 本次入库量 <= 库位最大容量 (防爆仓校验)
             var targetLocation = validLocations.FirstOrDefault(loc =>
                 occupiedLocationCodes.Contains(loc.Code) &&
                 (currentStocks.Where(s => s.LocationCode == loc.Code).Sum(s => s.Qty) + inQty) <= loc.MaxCapacity);
 
-            // 5. 最终决策：若找到了满足条件的同类库位，则返回之；若同类库位均已满载，则开辟一个新的空库位
+            // 5. 最终决策：若找到了满足条件的同类库位，则返回；若均已满载或无相似物料，则开辟空库位
             return targetLocation ?? GetEmptyLocation(validLocations, currentStocks);
+        }
+
+        /// <summary>
+        /// 策略 F：按波次入库 (集中区域存放)
+        /// 对应文档：按波次入库。将属于同一个采购单/波次单的物料，集中存放在相近的空库位，方便后续一波端出库。
+        /// </summary>
+        private Location GetLocationByWave(string goodsCode, List<Location> validLocations, List<Stock> currentStocks)
+        {
+            // 1. 去订单明细表查：当前这个物料，属于哪个未完成的入库单？
+            var relatedOrder = FIH_WMS_System.Utils.DbHelper.Db.Queryable<WmsOrderDetail>()
+                .Where(d => d.GoodsCode == goodsCode && d.Status < 2)
+                .Select(d => d.OrderNo)
+                .First();
+
+            if (string.IsNullOrEmpty(relatedOrder)) return GetEmptyLocation(validLocations, currentStocks); // 没有关联单据，直接找空位
+
+            // 2. 查出同一个单据里，还有哪些其他的物料？ (同波次的兄弟物料)
+            var waveGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<WmsOrderDetail>()
+                .Where(d => d.OrderNo == relatedOrder)
+                .Select(d => d.GoodsCode)
+                .ToList();
+
+            // 3. 看看这些“波次兄弟”目前已经存放在仓库的哪些位置了？
+            var waveStocks = currentStocks.Where(s => waveGoodsCodes.Contains(s.GoodsCode) && s.Qty > 0).ToList();
+            var waveLocations = waveStocks.Select(s => s.LocationCode).Distinct().ToList();
+
+            // 4. 尝试把当前物料，放到离“波次兄弟”所在区域 (Area) 最近的空库位里
+            var emptyLocations = validLocations.Where(loc => !currentStocks.Select(s => s.LocationCode).Contains(loc.Code)).ToList();
+
+            if (waveLocations.Count > 0)
+            {
+                // 拿到兄弟物料所在的区域（比如 A区）
+                var targetArea = validLocations.Where(l => l.Code == waveLocations.First()).Select(l => l.Area).FirstOrDefault();
+
+                // 在同区域里找一个纯空的库位给它
+                var targetLoc = emptyLocations.FirstOrDefault(l => l.Area == targetArea);
+                if (targetLoc != null) return targetLoc;
+            }
+
+            // 如果没找到同区域的空位（或者它是这个波次第一个入库的），就随便找个空库位开辟新领地
+            return GetEmptyLocation(validLocations, currentStocks);
         }
 
 

@@ -143,7 +143,8 @@ namespace FIH_WMS_System.UI
                 // 新增冷热算法
                 { InboundStrategy.UsageFrequency, "UsageFrequency-按使用频率入库 (智能冷热分区)" },
 
-                { InboundStrategy.ByCategory, "ByCategory-按物料分类集中存放 (同类分区)" }
+                { InboundStrategy.ByCategory, "ByCategory-按物料分类集中存放 (同类分区)" },
+                { InboundStrategy.ByWave, "ByWave-按波次分配库位 (同波次分区)" }
 
             };
 

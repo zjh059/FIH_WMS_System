@@ -137,7 +137,7 @@ namespace FIH_WMS_System.UI
         }
 
         // ==========================================
-        // 核心：一键派发 BOM 出库工单
+        // 核心：一键派发 BOM 出库工单 (升级)
         // ==========================================
         private void btnExecuteBOM_Click(object sender, EventArgs e)
         {
@@ -146,10 +146,29 @@ namespace FIH_WMS_System.UI
             // 检查是否有缺料情况
             if (currentBOMReqs.Any(r => !r.IsEnough))
             {
-                //语音播报警告
-                Utils.VoiceHelper.Speak("齐套检查失败，严禁盲目发料！");
+                Utils.VoiceHelper.Speak("齐套检查失败，已为您计算缺口并准备生成采购单。");
 
-                MessageBox.Show("警告：底层原材料库存不足以支撑该工单生产！\n出库任务已被拦截，请先安排采购入库。", "齐套性拦截", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // 👇 核心升级：不再是单纯的报错，而是提供一键采购的选项！
+                DialogResult shortResult = MessageBox.Show(
+                    "警告：底层原材料库存不足以支撑该工单生产！出库任务已被拦截。\n\n" +
+                    "是否需要系统自动根据缺口数量，为您一键生成【采购入库单】？",
+                    "齐套性拦截与智能补货",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (shortResult == DialogResult.Yes)
+                {
+                    bool purSuccess = wms.GeneratePurchaseOrderByBOM(currentBOMReqs);
+                    if (purSuccess)
+                    {
+                        Utils.VoiceHelper.Speak("采购补货单已成功下发至订单中心。");
+                        MessageBox.Show("🎉 BOM 缺料采购单已成功生成！\n请前往【单据管理中心】查看，并等待采购入库后再次尝试发料。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("采购单生成失败，请检查数据库连接状态。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
                 return;
             }
 
@@ -173,5 +192,11 @@ namespace FIH_WMS_System.UI
                 }
             }
         }
+
+
+
+
+
+
     }
 }

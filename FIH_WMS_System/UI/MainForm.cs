@@ -177,8 +177,11 @@ namespace FIH_WMS_System
 
                 else if (!string.IsNullOrEmpty(generatedReelId))
                 {
-                    Utils.VoiceHelper.Speak("物料入库成功，已为您生成追溯标签。");
-                    MessageBox.Show("🎉 入库成功！数据已更新，正在生成标签...", "系统提示");
+                    //修改语音播报和弹窗提示
+                    Utils.VoiceHelper.Speak("物料入库成功，已为您生成追溯标签，AGV小车正在前往收货区搬运。");
+                    MessageBox.Show("🎉 入库成功！数据已更新，AGV 搬运任务已下发，正在生成标签...", "系统提示");
+                    //Utils.VoiceHelper.Speak("物料入库成功，已为您生成追溯标签。");
+                    //MessageBox.Show("🎉 入库成功！数据已更新，正在生成标签...", "系统提示");
 
                     // ==========================================
                     // 3. 核心：用代码动态画一张“工业级物料追溯贴纸”！

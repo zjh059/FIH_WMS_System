@@ -1247,6 +1247,15 @@ namespace FIH_WMS_System.Services
 
 
 
+                // 4. 核心闭环：生成 AGV 入库搬运任务！(起点是收货贴标区，终点是分配好的智能库位)
+                string agvTaskNo = "AGV-IN-" + DateTime.Now.ToString("HHmmss") + "-" + new Random().Next(10, 99);
+
+                db.Execute(@"INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) 
+                             VALUES (@tNo, 0, 0, @gCode, @qty, '收货接驳区(贴标站)', @toLoc, GETDATE())",
+                             new { tNo = agvTaskNo, gCode = goodsCode, qty = qty, toLoc = locationCode });
+
+
+
                 return reelId;
             }
         }
@@ -1568,6 +1577,59 @@ namespace FIH_WMS_System.Services
                             db.Execute("INSERT INTO WmsOrderDetail (OrderNo, GoodsCode, PlanQty, ActualQty, Status) VALUES (@o, @g, @q, 0, 0)",
                                 new { o = orderNo, g = item.GoodsCode, q = needQty }, transaction);
                         }
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
+
+
+        // ==========================================
+        // 智能预警：根据 BOM 缺口一键生成采购单
+        // ==========================================
+        public bool GeneratePurchaseOrderByBOM(List<BOMRequirement> requirements)
+        {
+            // 1. 过滤出真正“缺料”的项，计算缺口数量
+            var shortageList = requirements.Where(r => !r.IsEnough).ToList();
+            if (shortageList.Count == 0) return false; // 根本不缺料，不用采购
+
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 2. 生成一个带 BOM 标识的采购单号
+                        string orderNo = "PUR-BOM-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+
+                        // 插入主单据 (OrderType = 0 表示入库/采购)
+                        db.Execute("INSERT INTO WmsOrder (OrderNo, OrderType, Status, CreateTime) VALUES (@o, 0, 0, GETDATE())",
+                                   new { o = orderNo }, transaction);
+
+                        // 3. 遍历缺料清单，生成明细
+                        foreach (var item in shortageList)
+                        {
+                            // 计算精准的缺口数量：总需求 - 当前可用
+                            int needQty = item.RequiredTotalQty - item.CurrentAvailableQty;
+
+                            if (needQty <= 0) continue; // 防呆
+
+                            db.Execute("INSERT INTO WmsOrderDetail (OrderNo, GoodsCode, PlanQty, ActualQty, Status) VALUES (@o, @g, @q, 0, 0)",
+                                new { o = orderNo, g = item.ChildGoodsCode, q = needQty }, transaction);
+                        }
+
+                        // 4. 记录系统操作日志
+                        db.Execute("INSERT INTO SysOperationLog (Username, ActionType, Description, OperateTime) VALUES (@u, '智能采购', @d, GETDATE())",
+                            new { u = Program.CurrentUsername, d = $"根据BOM齐套性分析，自动下发采购单：{orderNo}" }, transaction);
 
                         transaction.Commit();
                         return true;
