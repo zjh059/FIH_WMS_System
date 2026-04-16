@@ -141,7 +141,10 @@ namespace FIH_WMS_System.UI
                 { InboundStrategy.NearestFirst, "NearestFirst-按就近库位入库 (最高效)" },
 
                 // 新增冷热算法
-                { InboundStrategy.UsageFrequency, "UsageFrequency-按使用频率入库 (智能冷热分区)" }
+                { InboundStrategy.UsageFrequency, "UsageFrequency-按使用频率入库 (智能冷热分区)" },
+
+                { InboundStrategy.ByCategory, "ByCategory-按物料分类集中存放 (同类分区)" }
+
             };
 
             // 绑定到下拉框

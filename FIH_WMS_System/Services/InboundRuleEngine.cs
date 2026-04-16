@@ -36,7 +36,11 @@ namespace FIH_WMS_System.Services
         /// </summary>
         NearestFirst = 4,
 
-        UsageFrequency = 5 // 新增：按使用频率入库 (智能冷热分区)
+        UsageFrequency = 5, // 新增：按使用频率入库 (智能冷热分区)
+
+
+        ByCategory = 6, // 按物料分类、规格、品牌等分类入库 (同类集中)
+        ByWave = 7      // 按波次入库 (预留给后续波次入库的高级应用)
     }
 
     /// <summary>
@@ -84,6 +88,15 @@ namespace FIH_WMS_System.Services
                 //冷热分区策略：根据物料的使用频率（出库频率）来决定入库位置，常用的放在更靠近出口的位置，减少后续出库时间
                 case InboundStrategy.UsageFrequency:
                     return GetLocationByUsageFrequency(goodsCode, agvX, agvY, validLocations, currentStocks);
+
+
+
+                //新增：按物料分类、规格等特征集中存放的策略分支
+                // 如果同类物料的货架都满了，就找一个纯空的新库位开辟新领地
+                case InboundStrategy.ByCategory:
+                    return GetLocationByCategory(goodsCode, inQty, validLocations, currentStocks);
+
+
 
                 case InboundStrategy.Manual:
                 default:
@@ -182,6 +195,49 @@ namespace FIH_WMS_System.Services
                     .OrderByDescending(loc => Math.Pow(loc.PosX - agvX, 2) + Math.Pow(loc.PosY - agvY, 2))
                     .FirstOrDefault();
             }
+        }
+
+        /// <summary>
+        /// 策略 E：按物料分类集中存放 (同类分区策略)
+        /// 核心逻辑：检索待入库物料所属分类，优先将其分配至已存放同类物料的非满载库位；若无，则分配至空库位。
+        /// </summary>
+        /// <param name="goodsCode">待入库的物料编码</param>
+        /// <param name="inQty">本次计划入库数量</param>
+        /// <param name="validLocations">当前状态正常的可用库位集合</param>
+        /// <param name="currentStocks">当前系统的实时库存快照</param>
+        /// <returns>符合同类集中原则的目标库位，若无合适库位则返回首个空库位</returns>
+        private Location GetLocationByCategory(string goodsCode, int inQty, List<Location> validLocations, List<Stock> currentStocks)
+        {
+            // 1. 获取当前待入库物料的完整档案信息 (提取分类特征)
+            var currentGoods = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>().Where(g => g.Code == goodsCode).First();
+
+            // 容错处理：若该物料未维护分类信息，则直接降级为“寻找空库位”策略
+            if (currentGoods == null || string.IsNullOrEmpty(currentGoods.Category))
+            {
+                return GetEmptyLocation(validLocations, currentStocks);
+            }
+
+            // 2. 检索系统中所有隶属于同一分类的物料编码集合
+            var sameCategoryGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>()
+                .Where(g => g.Category == currentGoods.Category)
+                .Select(g => g.Code)
+                .ToList();
+
+            // 3. 筛选当前库存中，存放了这些同类物料的有效库存记录
+            var categoryStocks = currentStocks.Where(s => sameCategoryGoodsCodes.Contains(s.GoodsCode) && s.Qty > 0).ToList();
+
+            // 提取同类物料目前占用的所有库位编码 (去重)
+            var occupiedLocationCodes = categoryStocks.Select(s => s.LocationCode).Distinct().ToList();
+
+            // 4. 在状态正常的可用库位中寻找目标：
+            // 条件A：必须是同类物料所在的库位 (聚集效应)
+            // 条件B：该库位的当前总存量 + 本次入库量 <= 库位最大容量 (防爆仓校验)
+            var targetLocation = validLocations.FirstOrDefault(loc =>
+                occupiedLocationCodes.Contains(loc.Code) &&
+                (currentStocks.Where(s => s.LocationCode == loc.Code).Sum(s => s.Qty) + inQty) <= loc.MaxCapacity);
+
+            // 5. 最终决策：若找到了满足条件的同类库位，则返回之；若同类库位均已满载，则开辟一个新的空库位
+            return targetLocation ?? GetEmptyLocation(validLocations, currentStocks);
         }
 
 
