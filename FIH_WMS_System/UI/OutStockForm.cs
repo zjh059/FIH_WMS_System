@@ -42,7 +42,7 @@ namespace FIH_WMS_System.UI
                 { OutboundStrategy.Manual, "Manual-直接人工指定" },
                 { OutboundStrategy.FIFO, "FIFO-先进先出 (防过期)" },
 
-                { OutboundStrategy.FEFO, "FEFO-近效期优先 (防过期)" }, // 新增
+                { OutboundStrategy.FEFO, "FEFO-近效期优先 (防过期)" }, 
 
 
                 { OutboundStrategy.LIFO, "LIFO-后进先出" },
@@ -51,7 +51,12 @@ namespace FIH_WMS_System.UI
                 { OutboundStrategy.LeastQuantityFirst, "LeastQty-存量最少优先 (清空碎片)" }, 
                 { OutboundStrategy.MostQuantityFirst, "MostQty-存量充足优先 (减少搬运)" },
 
-                { OutboundStrategy.ByReelId, "ReelId-一物一码精准出库" } // 新增
+
+                { OutboundStrategy.ByWave, "Wave-按波次优化路径出库" },     
+                { OutboundStrategy.ByCategory, "Category-按分类集中出库" }, 
+
+
+                { OutboundStrategy.ByReelId, "ReelId-一物一码精准出库" } 
 
             };
 

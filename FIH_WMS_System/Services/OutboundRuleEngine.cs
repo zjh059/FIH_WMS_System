@@ -21,6 +21,9 @@ namespace FIH_WMS_System.Services
         LeastQuantityFirst = 5,     // 存量最少优先 (优先清空物料极少的零星碎片库位)
         MostQuantityFirst = 6,       // 存量充足优先 (集中大批量出库，减少搬运次数)
 
+        ByWave = 8,                 // 新增：按物料波次出库
+        ByCategory = 9,             // 新增：按物料分类出库
+
         FEFO = 7,                   // 新增：近效期优先 (快过期的先出)
         ByReelId = 10               // 新增：按指定唯一追溯码精准出库
     }
@@ -118,6 +121,24 @@ namespace FIH_WMS_System.Services
                             .ToList();
                     }
                     return availableStocks.OrderBy(s => s.LocationCode).ToList();
+
+
+
+
+                case OutboundStrategy.ByWave:
+                case OutboundStrategy.ByCategory:
+                    // 宏观的波次和分类合并已在 UI 层 (WaveForm) 处理。
+                    // 微观到底层去哪个货架拿货时，为了配合 AGV 批量拣货最高效，底层统一转为“路径最短(就近)原则”
+                    if (allLocations != null && allLocations.Any())
+                    {
+                        return availableStocks
+                            .Join(allLocations, s => s.LocationCode, l => l.Code, (s, l) => new { Stock = s, Loc = l })
+                            .OrderBy(x => Math.Pow(x.Loc.PosX - targetX, 2) + Math.Pow(x.Loc.PosY - targetY, 2))
+                            .Select(x => x.Stock)
+                            .ToList();
+                    }
+                    return availableStocks.OrderBy(s => s.LocationCode).ToList();
+
 
 
 
