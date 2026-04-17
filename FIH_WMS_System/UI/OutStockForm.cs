@@ -32,6 +32,7 @@ namespace FIH_WMS_System.UI
         public OutStockForm()
         {
             InitializeComponent();
+            this.Load += OutStockForm_Load; //  新增:确保窗口打开时会执行数据加载
         }
 
         private void OutStockForm_Load(object sender, EventArgs e)
@@ -40,13 +41,39 @@ namespace FIH_WMS_System.UI
             {
                 { OutboundStrategy.Manual, "Manual-直接人工指定" },
                 { OutboundStrategy.FIFO, "FIFO-先进先出 (防过期)" },
+
+                { OutboundStrategy.FEFO, "FEFO-近效期优先 (防过期)" }, // 新增
+
+
                 { OutboundStrategy.LIFO, "LIFO-后进先出" },
                 { OutboundStrategy.NearestFirst, "NearestFirst-就近原则" },
 
                 { OutboundStrategy.LeastQuantityFirst, "LeastQty-存量最少优先 (清空碎片)" }, 
-                { OutboundStrategy.MostQuantityFirst, "MostQty-存量充足优先 (减少搬运)" }
+                { OutboundStrategy.MostQuantityFirst, "MostQty-存量充足优先 (减少搬运)" },
+
+                { OutboundStrategy.ByReelId, "ReelId-一物一码精准出库" } // 新增
 
             };
+
+
+
+            // 1. 给第一页的单品出库下拉框绑定数据
+            cmbStrategy.DataSource = new BindingSource(strategyDict, null);
+            cmbStrategy.DisplayMember = "Value";
+            cmbStrategy.ValueMember = "Key";
+            cmbStrategy.SelectedValue = OutboundStrategy.FIFO;
+
+            // 2. 给第三页的追加补料下拉框也绑定数据 (注意必须 new 一个新的 BindingSource，否则两页的下拉框会互相干扰联动)
+            if (cmbStrategyAdd != null)
+            {
+                cmbStrategyAdd.DataSource = new BindingSource(strategyDict, null);
+                cmbStrategyAdd.DisplayMember = "Value";
+                cmbStrategyAdd.ValueMember = "Key";
+                cmbStrategyAdd.SelectedValue = OutboundStrategy.FIFO;
+            }
+
+
+
 
             cmbStrategy.DataSource = new BindingSource(strategyDict, null);
             cmbStrategy.DisplayMember = "Value";
@@ -80,10 +107,24 @@ namespace FIH_WMS_System.UI
                 if (!string.IsNullOrEmpty(scannedCode))
                 {
                     System.Media.SystemSounds.Beep.Play();
-                    Utils.VoiceHelper.Speak("扫码成功");
-                    txtGoodsCode.Text = scannedCode;
+
+                    // 【新增智能识别】：判断扫进来的是物料码还是长长的工业追溯码 (ReelId)
+                    // 比如 XX-化工-G001-20260415-1815 包含 "-" 且长度分段较多
+                    if (scannedCode.Contains("-") && scannedCode.Split('-').Length >= 4)
+                    {
+                        Utils.VoiceHelper.Speak("已识别为物料追溯码，自动开启一物一码出库");
+                        txtGoodsCode.Text = scannedCode; // 把 ReelId 填进文本框
+                        cmbStrategy.SelectedValue = OutboundStrategy.ByReelId; // 自动切策略！
+                    }
+                    else
+                    {
+                        Utils.VoiceHelper.Speak("扫码成功");
+                        txtGoodsCode.Text = scannedCode; // 普通物料码
+                        cmbStrategy.SelectedValue = OutboundStrategy.FIFO; // 默认 FIFO
+                    }
+
                     txtScanner.Clear();
-                    txtQty.Focus();
+                    txtQty.Focus(); // 焦点自动跳到数量框
                 }
             }
         }
@@ -193,7 +234,48 @@ namespace FIH_WMS_System.UI
             }
         }
 
+        // ==========================================
+        // 核心：执行产线追加需求单
+        // ==========================================
+        private void btnExecuteAdd_Click(object sender, EventArgs e)
+        {
+            // 获取输入框的值（稍后你在界面上拖出这三个框，把 Name 命名成这样就行）
+            string woNo = txtAddWO.Text.Trim();
+            string goodsCode = txtAddGoodsCode.Text.Trim();
 
+            if (string.IsNullOrEmpty(goodsCode) || !int.TryParse(txtAddQty.Text.Trim(), out int qty) || qty <= 0)
+            {
+                MessageBox.Show("请输入正确的追加物料编码和数量！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 默认采用先进先出策略防过期
+            OutboundStrategy strategy = OutboundStrategy.FIFO;
+
+            DialogResult result = MessageBox.Show(
+                $"确认生成追加领料单并呼叫 AGV 吗？\n\n关联工单：{(string.IsNullOrEmpty(woNo) ? "无" : woNo)}\n追加物料：{goodsCode}\n追加数量：{qty}",
+                "追加出库确认", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                // 呼叫大脑处理
+                bool success = wms.ExecuteAdditionalOutbound(woNo, goodsCode, qty, strategy);
+
+                if (success)
+                {
+                    Utils.VoiceHelper.Speak("产线追加物料单已下发，AGV正在为您备料。");
+                    MessageBox.Show("🎉 追加需求单下发成功！\n系统已扣减库存，AGV 正在前往取货。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // 标记出库成功，关闭窗口并让主界面刷新表格
+                    this.IsBOMOutCompleted = true;
+                    this.DialogResult = DialogResult.OK;
+                }
+                else
+                {
+                    MessageBox.Show("❌ 出库失败：可能是仓库中该物料库存已不足，或已被其他任务冻结占用！", "系统警告", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
 
 
 

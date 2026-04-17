@@ -835,6 +835,27 @@ namespace FIH_WMS_System.Services
                 }, splitOn: "Id").ToList();
 
 
+                // 升级：若是 ReelId 扫码精准出库，直接拦截
+                if (strategy == OutboundStrategy.ByReelId)
+                {
+                    // 此时传进来的 goodsCode 其实是那一盘料独一无二的 ReelId
+                    var exactStock = currentStocks.FirstOrDefault(s => s.ReelId == goodsCode);
+                    if (exactStock == null || (exactStock.Qty - exactStock.FrozenQty) < requiredQty)
+                        return new List<Stock>(); // 没找到或者数量不够
+
+                    // 若找到，无视所有规则，直接返回这盘料
+                    return new List<Stock> {
+                        new Stock {
+                            Id = exactStock.Id, LocationCode = exactStock.LocationCode,
+                            BatchNo = exactStock.BatchNo, Qty = requiredQty
+                        }
+                    };
+                }
+
+
+
+
+
                 // 2. 召唤出库大脑进行优先级排序
                 var engine = new OutboundRuleEngine();
                 var sortedStocks = engine.RecommendOutboundStocks(goodsCode, currentStocks, strategy);
@@ -876,6 +897,21 @@ namespace FIH_WMS_System.Services
         public bool SmartOutStock(string goodsCode, int qty, string orderNo = "AUTO-OUT-001", OutboundStrategy strategy = OutboundStrategy.FIFO)
         {
             if (qty <= 0) return false;
+
+
+
+
+            // 修复：若是扫 ReelId 进来的，goodsCode 其实是长串追溯码。
+            // 需要把它拆开，提取出真实的物料编码 (比如 G001)，防止错存数据库！
+            string realGoodsCode = goodsCode;
+            if (strategy == OutboundStrategy.ByReelId && goodsCode.Contains("-"))
+            {
+                var parts = goodsCode.Split('-');
+                if (parts.Length >= 3) realGoodsCode = parts[2]; // ReelId 第3段就是物料编码
+            }
+
+
+
 
             // 1. 先调用上面的建议方法，看库存到底够不够
             var pickAdvice = GetOutboundPickAdvice(goodsCode, qty, strategy);
@@ -940,6 +976,59 @@ namespace FIH_WMS_System.Services
                 }
             }
         }
+
+
+
+        // ==========================================
+        // 智能制造：产线追加需求单 (不良/损耗追加出库)
+        // ==========================================
+        public bool ExecuteAdditionalOutbound(string workOrderNo, string goodsCode, int qty, OutboundStrategy strategy = OutboundStrategy.FIFO)
+        {
+            if (qty <= 0) return false;
+
+            // 1. 拦截防呆：先看看仓库里这玩意儿还够不够？
+            var pickAdvice = GetOutboundPickAdvice(goodsCode, qty, strategy);
+            int totalAvailable = pickAdvice.Sum(p => p.Qty);
+
+            if (totalAvailable < qty)
+            {
+                return false; // 连追加的量都不够了，直接驳回
+            }
+
+            // 2. 智能生成追加单号 (前缀 ADD 代表追加单)
+            string addOrderNo = string.IsNullOrEmpty(workOrderNo)
+                ? "ADD-" + DateTime.Now.ToString("yyyyMMddHHmmss")
+                : "ADD-" + workOrderNo + "-" + DateTime.Now.ToString("HHmmss");
+
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 3. 往【单据管理中心】写入宏观单据留底
+                        Dapper.SqlMapper.Execute(db, "INSERT INTO WmsOrder (OrderNo, OrderType, Status, CreateTime) VALUES (@o, 1, 2, GETDATE())",
+                                   new { o = addOrderNo }, transaction);
+
+                        Dapper.SqlMapper.Execute(db, "INSERT INTO WmsOrderDetail (OrderNo, GoodsCode, PlanQty, ActualQty, Status) VALUES (@o, @g, @q, @q, 2)",
+                                   new { o = addOrderNo, g = goodsCode, q = qty }, transaction);
+
+                        transaction.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+
+            // 4. 完美复用底层智能出库引擎：扣减真实库存、记流水账、并呼叫 AGV 给你送过去！
+            return SmartOutStock(goodsCode, qty, addOrderNo, strategy);
+        }
+
+
 
 
         // ==========================================

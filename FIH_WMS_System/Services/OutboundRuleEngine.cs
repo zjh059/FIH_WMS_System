@@ -19,7 +19,10 @@ namespace FIH_WMS_System.Services
         NearestFirst = 4,           // 采用就近原则出库
 
         LeastQuantityFirst = 5,     // 存量最少优先 (优先清空物料极少的零星碎片库位)
-        MostQuantityFirst = 6       // 存量充足优先 (集中大批量出库，减少搬运次数)
+        MostQuantityFirst = 6,       // 存量充足优先 (集中大批量出库，减少搬运次数)
+
+        FEFO = 7,                   // 新增：近效期优先 (快过期的先出)
+        ByReelId = 10               // 新增：按指定唯一追溯码精准出库
     }
 
     /// <summary>
@@ -65,13 +68,37 @@ namespace FIH_WMS_System.Services
             // 2. 根据不同策略进行排序推荐
             switch (strategy)
             {
+                //case OutboundStrategy.FIFO:
+                //    // 先进先出：入库时间越早的，排在越前面
+                //    //return availableStocks.OrderBy(s => s.InStockTime).ToList();
+                //    // 先进先出：入库时间越早的排前面。如果时间一样，优先出数量少的（清空碎片货架）
+                //    //return availableStocks.OrderBy(s => s.InStockTime).ThenBy(s => s.Qty).ToList();
+                //    //优先看生产日期(FEFO防过期机制)，没生产日期的再看入库时间。
+                //    return availableStocks.OrderBy(s => s.ProduceDate ?? s.InStockTime).ThenBy(s => s.Qty).ToList();
+
+
+
+
+                //2
                 case OutboundStrategy.FIFO:
-                    // 先进先出：入库时间越早的，排在越前面
-                    //return availableStocks.OrderBy(s => s.InStockTime).ToList();
-                    // 先进先出：入库时间越早的排前面。如果时间一样，优先出数量少的（清空碎片货架）
-                    //return availableStocks.OrderBy(s => s.InStockTime).ThenBy(s => s.Qty).ToList();
-                    //优先看生产日期(FEFO防过期机制)，没生产日期的再看入库时间。
-                    return availableStocks.OrderBy(s => s.ProduceDate ?? s.InStockTime).ThenBy(s => s.Qty).ToList();
+                    // 【纯正先进先出】：只看什么时候进的仓库
+                    return availableStocks.OrderBy(s => s.InStockTime).ThenBy(s => s.Qty).ToList();
+
+                //7
+                case OutboundStrategy.FEFO:
+                    // 【近效期优先】：有生产日期的排前面，日期越早（越快过期）越优先出库！
+                    return availableStocks
+                        .OrderBy(s => s.ProduceDate.HasValue ? 0 : 1) // 确保有日期的不被排到最后
+                        .ThenBy(s => s.ProduceDate)
+                        .ThenBy(s => s.Qty)
+                        .ToList();
+                //10
+                case OutboundStrategy.ByReelId:
+                    // 【追溯码出库】：不需要引擎排序，将由 WmsService 直接精准匹配
+                    return availableStocks;
+
+
+
 
                 case OutboundStrategy.LIFO:
                     // 后进先出：入库时间越晚的，排在越前面
