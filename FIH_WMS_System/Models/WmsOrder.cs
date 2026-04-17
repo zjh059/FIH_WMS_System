@@ -23,5 +23,8 @@ namespace FIH_WMS_System.Models
         public int OrderType { get; set; }                  // 0: 入库单, 1: 出库单
         public int Status { get; set; }                     // 0: 新建待处理, 1: 执行中, 2: 已完成
         public DateTime CreateTime { get; set; }            // 创建时间
+
+        
+        public string WaveNo { get; set; }                  //波次号字段 (可为空)
     }
 }
