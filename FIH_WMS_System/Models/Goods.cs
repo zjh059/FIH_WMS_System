@@ -34,6 +34,8 @@ namespace FIH_WMS_System.Models
         public string Brand { get; set; } = string.Empty;//品牌字段
 
         public int ShelfLifeDays { get; set; }//新增：保质期(天数)。0代表无保质期限制
+
+        public string Usage { get; set; } = string.Empty;// 新增：物料用途字段 (如：SMT贴片、外壳组装等)
     }
 }
 

@@ -234,10 +234,27 @@ namespace FIH_WMS_System.UI
             {
                 e.SuppressKeyPress = true; // 消除系统默认的 '叮' 提示音
 
-                // 1. 瞬间自动点击“智能推荐”按钮
+                string scannedCode = txtGoodsCode.Text.Trim();
+
+                // 核心升级：智能解析原厂或旧的 ReelId
+                // 假设扫进来的长条码是: FIH-SMT-G001-20260417-1234
+                if (scannedCode.Contains("-") && scannedCode.Split('-').Length >= 3)
+                {
+                    var parts = scannedCode.Split('-');
+                    string realGoodsCode = parts[2]; // 提取出真实的物料编码 (比如 G001)
+
+                    txtGoodsCode.Text = realGoodsCode; // 自动替换为干净的物料编码
+                    Utils.VoiceHelper.Speak("已识别追溯条码，正在为您自动分配库位");
+                }
+                else
+                {
+                    Utils.VoiceHelper.Speak("扫码成功");
+                }
+
+                // 1. 瞬间自动点击“智能推荐”按钮，让底层引擎去查这个物料的所有特征
                 btnRecommend_Click(null, null);
 
-                // 2. 将光标自动跳到“数量”框，让工人可以直接填数量！
+                // 2. 将光标自动跳到“数量”框，可以直接填数量
                 txtQty.Focus();
             }
         }

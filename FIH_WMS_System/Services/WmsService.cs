@@ -2005,6 +2005,89 @@ namespace FIH_WMS_System.Services
         }
 
 
+        // ==========================================
+        // 宏观单据流转：手工建单 (手工录入采购入库单)
+        // ==========================================
+        public bool CreateManualPurchaseOrder(List<Models.WmsOrderDetail> details)
+        {
+            if (details == null || details.Count == 0) return false;
+
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. 生成带有 MAN (Manual) 标识的采购单号
+                        string orderNo = "PUR-MAN-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+
+                        // 2. 插入主单据 (OrderType = 0 表示入库单/采购单)
+                        Dapper.SqlMapper.Execute(db,
+                            "INSERT INTO WmsOrder (OrderNo, OrderType, Status, CreateTime) VALUES (@o, 0, 0, GETDATE())",
+                            new { o = orderNo }, transaction);
+
+                        // 3. 循环插入所有物料明细
+                        foreach (var item in details)
+                        {
+                            Dapper.SqlMapper.Execute(db,
+                                "INSERT INTO WmsOrderDetail (OrderNo, GoodsCode, PlanQty, ActualQty, Status) VALUES (@o, @g, @q, 0, 0)",
+                                new { o = orderNo, g = item.GoodsCode, q = item.PlanQty }, transaction);
+                        }
+
+                        // 4. 记录系统审计日志
+                        Dapper.SqlMapper.Execute(db,
+                            "INSERT INTO SysOperationLog (Username, ActionType, Description, OperateTime) VALUES (@u, '单据管理', @d, GETDATE())",
+                            new { u = Program.CurrentUsername, d = $"手工创建了采购入库单：{orderNo}" }, transaction);
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 宏观单据流转：入库波次合并 (Consolidation)
+        // ==========================================
+        public bool ConsolidateInboundOrders(List<string> orderNos, string waveNo)
+        {
+            if (orderNos == null || orderNos.Count == 0 || string.IsNullOrEmpty(waveNo)) return false;
+
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 将选中的所有入库单的 WaveNo 更新为指定值
+                        foreach (var orderNo in orderNos)
+                        {
+                            Dapper.SqlMapper.Execute(db,
+                                "UPDATE WmsOrder SET WaveNo = @w WHERE OrderNo = @o",
+                                new { w = waveNo, o = orderNo }, transaction);
+                        }
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
+
 
     }
 }

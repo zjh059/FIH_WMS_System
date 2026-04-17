@@ -17,90 +17,122 @@
 
         private void InitializeComponent()
         {
-            this.lblOrders = new System.Windows.Forms.Label();
-            this.dgvOrders = new System.Windows.Forms.DataGridView();
-            this.lblDetails = new System.Windows.Forms.Label();
-            this.dgvDetails = new System.Windows.Forms.DataGridView();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvOrders)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvDetails)).BeginInit();
-            this.SuspendLayout();
+            lblOrders = new Label();
+            dgvOrders = new DataGridView();
+            lblDetails = new Label();
+            dgvDetails = new DataGridView();
+            btnAddPurchaseOrder = new Button();
+            btnWaveConsolidate = new Button();
+            ((System.ComponentModel.ISupportInitialize)dgvOrders).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)dgvDetails).BeginInit();
+            SuspendLayout();
             // 
             // lblOrders
             // 
-            this.lblOrders.AutoSize = true;
-            this.lblOrders.Font = new System.Drawing.Font("微软雅黑", 10.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.lblOrders.Location = new System.Drawing.Point(20, 20);
-            this.lblOrders.Name = "lblOrders";
-            this.lblOrders.Size = new System.Drawing.Size(262, 25);
-            this.lblOrders.TabIndex = 0;
-            this.lblOrders.Text = "📌 主单据列表 (WmsOrder)：";
+            lblOrders.AutoSize = true;
+            lblOrders.Font = new Font("微软雅黑", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 134);
+            lblOrders.Location = new Point(29, 28);
+            lblOrders.Margin = new Padding(4, 0, 4, 0);
+            lblOrders.Name = "lblOrders";
+            lblOrders.Size = new Size(380, 34);
+            lblOrders.TabIndex = 0;
+            lblOrders.Text = "📌 主单据列表 (WmsOrder)：";
             // 
             // dgvOrders
             // 
-            this.dgvOrders.AllowUserToAddRows = false;
-            this.dgvOrders.AllowUserToDeleteRows = false;
-            this.dgvOrders.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.dgvOrders.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-            this.dgvOrders.BackgroundColor = System.Drawing.Color.WhiteSmoke;
-            this.dgvOrders.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvOrders.Location = new System.Drawing.Point(20, 50);
-            this.dgvOrders.MultiSelect = false;
-            this.dgvOrders.Name = "dgvOrders";
-            this.dgvOrders.ReadOnly = true;
-            this.dgvOrders.RowHeadersWidth = 51;
-            this.dgvOrders.RowTemplate.Height = 29;
-            this.dgvOrders.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvOrders.Size = new System.Drawing.Size(940, 250);
-            this.dgvOrders.TabIndex = 1;
-            this.dgvOrders.SelectionChanged += new System.EventHandler(this.dgvOrders_SelectionChanged);
+            dgvOrders.AllowUserToAddRows = false;
+            dgvOrders.AllowUserToDeleteRows = false;
+            dgvOrders.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            dgvOrders.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvOrders.BackgroundColor = Color.WhiteSmoke;
+            dgvOrders.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvOrders.Location = new Point(29, 89);
+            dgvOrders.Margin = new Padding(4);
+            dgvOrders.MultiSelect = false;
+            dgvOrders.Name = "dgvOrders";
+            dgvOrders.ReadOnly = true;
+            dgvOrders.RowHeadersWidth = 51;
+            dgvOrders.RowTemplate.Height = 29;
+            dgvOrders.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvOrders.Size = new Size(1358, 493);
+            dgvOrders.TabIndex = 1;
+            dgvOrders.SelectionChanged += dgvOrders_SelectionChanged;
             // 
             // lblDetails
             // 
-            this.lblDetails.AutoSize = true;
-            this.lblDetails.Font = new System.Drawing.Font("微软雅黑", 10.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.lblDetails.Location = new System.Drawing.Point(20, 320);
-            this.lblDetails.Name = "lblDetails";
-            this.lblDetails.Size = new System.Drawing.Size(359, 25);
-            this.lblDetails.TabIndex = 2;
-            this.lblDetails.Text = "📦 单据包含的物料明细 (WmsOrderDetail)：";
+            lblDetails.AutoSize = true;
+            lblDetails.Font = new Font("微软雅黑", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 134);
+            lblDetails.Location = new Point(29, 623);
+            lblDetails.Margin = new Padding(4, 0, 4, 0);
+            lblDetails.Name = "lblDetails";
+            lblDetails.Size = new Size(562, 34);
+            lblDetails.TabIndex = 2;
+            lblDetails.Text = "📦 单据包含的物料明细 (WmsOrderDetail)：";
             // 
             // dgvDetails
             // 
-            this.dgvDetails.AllowUserToAddRows = false;
-            this.dgvDetails.AllowUserToDeleteRows = false;
-            this.dgvDetails.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.dgvDetails.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-            this.dgvDetails.BackgroundColor = System.Drawing.Color.WhiteSmoke;
-            this.dgvDetails.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvDetails.Location = new System.Drawing.Point(20, 350);
-            this.dgvDetails.Name = "dgvDetails";
-            this.dgvDetails.ReadOnly = true;
-            this.dgvDetails.RowHeadersWidth = 51;
-            this.dgvDetails.RowTemplate.Height = 29;
-            this.dgvDetails.Size = new System.Drawing.Size(940, 350);
-            this.dgvDetails.TabIndex = 3;
+            dgvDetails.AllowUserToAddRows = false;
+            dgvDetails.AllowUserToDeleteRows = false;
+            dgvDetails.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dgvDetails.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvDetails.BackgroundColor = Color.WhiteSmoke;
+            dgvDetails.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvDetails.Location = new Point(29, 687);
+            dgvDetails.Margin = new Padding(4);
+            dgvDetails.Name = "dgvDetails";
+            dgvDetails.ReadOnly = true;
+            dgvDetails.RowHeadersWidth = 51;
+            dgvDetails.RowTemplate.Height = 29;
+            dgvDetails.Size = new Size(1358, 467);
+            dgvDetails.TabIndex = 3;
+            // 
+            // btnAddPurchaseOrder
+            // 
+            btnAddPurchaseOrder.BackColor = Color.Orange;
+            btnAddPurchaseOrder.Font = new Font("微软雅黑", 9.857143F, FontStyle.Bold, GraphicsUnit.Point, 134);
+            btnAddPurchaseOrder.ForeColor = Color.White;
+            btnAddPurchaseOrder.Location = new Point(1156, 26);
+            btnAddPurchaseOrder.Name = "btnAddPurchaseOrder";
+            btnAddPurchaseOrder.Size = new Size(231, 40);
+            btnAddPurchaseOrder.TabIndex = 4;
+            btnAddPurchaseOrder.Text = "➕ 手工录入采购单";
+            btnAddPurchaseOrder.UseVisualStyleBackColor = false;
+            btnAddPurchaseOrder.Click += btnAddPurchaseOrder_Click;
+            // 
+            // btnWaveConsolidate
+            // 
+            btnWaveConsolidate.BackColor = Color.LightSeaGreen;
+            btnWaveConsolidate.Font = new Font("微软雅黑", 9.857143F, FontStyle.Bold, GraphicsUnit.Point, 134);
+            btnWaveConsolidate.ForeColor = Color.White;
+            btnWaveConsolidate.Location = new Point(901, 26);
+            btnWaveConsolidate.Name = "btnWaveConsolidate";
+            btnWaveConsolidate.Size = new Size(231, 40);
+            btnWaveConsolidate.TabIndex = 5;
+            btnWaveConsolidate.Text = "🌊 入库波次合并";
+            btnWaveConsolidate.UseVisualStyleBackColor = false;
+            btnWaveConsolidate.Click += btnWaveConsolidate_Click;
             // 
             // OrderCenterForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(1000, 750);
-            this.Controls.Add(this.dgvDetails);
-            this.Controls.Add(this.lblDetails);
-            this.Controls.Add(this.dgvOrders);
-            this.Controls.Add(this.lblOrders);
-            this.Name = "OrderCenterForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "📑 宏观单据流转中心 (ERP 订单视图)";
-            this.Load += new System.EventHandler(this.OrderCenterForm_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.dgvOrders)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvDetails)).EndInit();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(13F, 28F);
+            AutoScaleMode = AutoScaleMode.Font;
+            BackColor = Color.White;
+            ClientSize = new Size(1444, 1184);
+            Controls.Add(btnWaveConsolidate);
+            Controls.Add(btnAddPurchaseOrder);
+            Controls.Add(dgvDetails);
+            Controls.Add(lblDetails);
+            Controls.Add(dgvOrders);
+            Controls.Add(lblOrders);
+            Margin = new Padding(4);
+            Name = "OrderCenterForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "📑 宏观单据流转中心 (ERP 订单视图)";
+            Load += OrderCenterForm_Load;
+            ((System.ComponentModel.ISupportInitialize)dgvOrders).EndInit();
+            ((System.ComponentModel.ISupportInitialize)dgvDetails).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
 
         }
 
@@ -110,5 +142,10 @@
         private System.Windows.Forms.DataGridView dgvOrders;
         private System.Windows.Forms.Label lblDetails;
         private System.Windows.Forms.DataGridView dgvDetails;
+        private Button btnAddPurchaseOrder;
+        //private Button button1;
+        private Button btnWaveConsolidate;
+
+        //private System.Windows.Forms.Button btnAddPurchaseOrder;
     }
 }

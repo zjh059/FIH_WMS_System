@@ -31,5 +31,51 @@ namespace FIH_WMS_System.UI
                 dgvDetails.DataSource = wms.GetOrderDetails(orderNo);
             }
         }
+
+        //// 手工录入按钮点击事件
+        //private void btnAddPurchaseOrder_Click(object sender, EventArgs e)
+        //{
+        //    // 弹出手工建单窗口
+        //    AddPurchaseOrderForm form = new AddPurchaseOrderForm();
+
+        //    if (form.ShowDialog() == DialogResult.OK)
+        //    {
+        //        // 如果子窗口返回 OK（说明保存成功），立即刷新当前页面的订单列表
+        //        dgvOrders.DataSource = wms.GetAllOrders();
+
+        //        // 提示一下用户
+        //        // Utils.VoiceHelper.Speak("单据列表已更新");
+        //    }
+        //}
+
+
+        // 手工录入按钮点击事件
+        private void btnAddPurchaseOrder_Click(object sender, EventArgs e)
+        {
+            // 弹出手工建单窗口
+            AddPurchaseOrderForm form = new AddPurchaseOrderForm();
+
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                // 如果子窗口返回 OK（说明保存成功），立即刷新当前页面的订单列表
+                dgvOrders.DataSource = wms.GetAllOrders();
+
+                //提示一下用户
+                Utils.VoiceHelper.Speak("单据列表已更新");
+            }
+        }
+
+        // 波次合并按钮点击事件
+        private void btnWaveConsolidate_Click(object sender, EventArgs e)
+        {
+            InboundWaveConsolidationForm form = new InboundWaveConsolidationForm();
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                // 合并完成后，刷新一下订单列表（以便你能看到底层数据可能的变化）
+                dgvOrders.DataSource = wms.GetAllOrders();
+            }
+        }
+
+
     }
 }

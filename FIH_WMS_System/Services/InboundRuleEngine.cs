@@ -246,6 +246,7 @@ namespace FIH_WMS_System.Services
         //    return targetLocation ?? GetEmptyLocation(validLocations, currentStocks);
         //}
 
+
         /// <summary>
         /// 策略 E (完全版)：多维度特征识别集中存放 (同类分区策略)
         /// 对应文档：通过物料reelId识别，按物料分类、规格、品牌、用途、有效期等分类入库
@@ -257,13 +258,14 @@ namespace FIH_WMS_System.Services
 
             if (currentGoods == null) return GetEmptyLocation(validLocations, currentStocks);
 
-            // 2. 核心：多维度相似度匹配！不仅仅看分类，还看品牌、规格、保质期
-            // 只要满足其中任意一个核心维度相同（且不为空），我们就认为它们是“同类特征物料”
+            // 2. 核心：多维度相似度匹配！不仅仅看分类，还看品牌、规格、保质期、用途
+            // 只要满足其中任意一个核心维度相同（且不为空），我们就认为它们是“同类特征物料”，可以放在一起
             var similarGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>()
                 .Where(g =>
                     (g.Category == currentGoods.Category && !string.IsNullOrEmpty(currentGoods.Category)) ||
                     (g.Brand == currentGoods.Brand && !string.IsNullOrEmpty(currentGoods.Brand)) ||
                     (g.Spec == currentGoods.Spec && !string.IsNullOrEmpty(currentGoods.Spec)) ||
+                    (g.Usage == currentGoods.Usage && !string.IsNullOrEmpty(currentGoods.Usage)) || // 👈 新增：把“用途”加入同类项判定！
                     (g.ShelfLifeDays == currentGoods.ShelfLifeDays && currentGoods.ShelfLifeDays > 0)
                 )
                 .Select(g => g.Code)
@@ -287,44 +289,59 @@ namespace FIH_WMS_System.Services
             return targetLocation ?? GetEmptyLocation(validLocations, currentStocks);
         }
 
+
+
         /// <summary>
         /// 策略 F：按波次入库 (集中区域存放)
         /// 对应文档：按波次入库。将属于同一个采购单/波次单的物料，集中存放在相近的空库位，方便后续一波端出库。
         /// </summary>
         private Location GetLocationByWave(string goodsCode, List<Location> validLocations, List<Stock> currentStocks)
         {
-            // 1. 去订单明细表查：当前这个物料，属于哪个未完成的入库单？
-            var relatedOrder = FIH_WMS_System.Utils.DbHelper.Db.Queryable<WmsOrderDetail>()
-                .Where(d => d.GoodsCode == goodsCode && d.Status < 2)
-                .Select(d => d.OrderNo)
+            // 1. 查找当前物料所属的未完成入库单
+            var orderInfo = FIH_WMS_System.Utils.DbHelper.Db.Queryable<WmsOrder>()
+                .LeftJoin<WmsOrderDetail>((o, d) => o.OrderNo == d.OrderNo)
+                .Where((o, d) => d.GoodsCode == goodsCode && d.Status < 2)
+                .Select((o, d) => new { o.OrderNo, o.WaveNo })
                 .First();
 
-            if (string.IsNullOrEmpty(relatedOrder)) return GetEmptyLocation(validLocations, currentStocks); // 没有关联单据，直接找空位
+            if (orderInfo == null) return GetEmptyLocation(validLocations, currentStocks);
 
-            // 2. 查出同一个单据里，还有哪些其他的物料？ (同波次的兄弟物料)
-            var waveGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<WmsOrderDetail>()
-                .Where(d => d.OrderNo == relatedOrder)
-                .Select(d => d.GoodsCode)
-                .ToList();
+            // 2. 【核心升级】：跨单据聚合波次物料
+            List<string> waveGoodsCodes;
+            if (!string.IsNullOrEmpty(orderInfo.WaveNo))
+            {
+                // 如果有大波次编号，找出该波次下所有采购单的所有物料
+                waveGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<WmsOrderDetail>()
+                    .Where(d => FIH_WMS_System.Utils.DbHelper.Db.Queryable<WmsOrder>()
+                        .Where(o => o.WaveNo == orderInfo.WaveNo)
+                        .Select(o => o.OrderNo).ToList().Contains(d.OrderNo))
+                    .Select(d => d.GoodsCode)
+                    .Distinct().ToList();
+            }
+            else
+            {
+                // 否则，维持原状：仅查找当前单据内的物料
+                waveGoodsCodes = FIH_WMS_System.Utils.DbHelper.Db.Queryable<WmsOrderDetail>()
+                    .Where(d => d.OrderNo == orderInfo.OrderNo)
+                    .Select(d => d.GoodsCode)
+                    .ToList();
+            }
 
-            // 3. 看看这些“波次兄弟”目前已经存放在仓库的哪些位置了？
+            // 3. 寻找这些“波次兄弟”物料目前在仓库中的分布区域
             var waveStocks = currentStocks.Where(s => waveGoodsCodes.Contains(s.GoodsCode) && s.Qty > 0).ToList();
-            var waveLocations = waveStocks.Select(s => s.LocationCode).Distinct().ToList();
-
-            // 4. 尝试把当前物料，放到离“波次兄弟”所在区域 (Area) 最近的空库位里
             var emptyLocations = validLocations.Where(loc => !currentStocks.Select(s => s.LocationCode).Contains(loc.Code)).ToList();
 
-            if (waveLocations.Count > 0)
+            if (waveStocks.Count > 0)
             {
-                // 拿到兄弟物料所在的区域（比如 A区）
-                var targetArea = validLocations.Where(l => l.Code == waveLocations.First()).Select(l => l.Area).FirstOrDefault();
+                // 获取第一个兄弟物料所在的区域（例如 A区）
+                var siblingLoc = waveStocks.First().LocationCode;
+                var targetArea = validLocations.Where(l => l.Code == siblingLoc).Select(l => l.Area).FirstOrDefault();
 
-                // 在同区域里找一个纯空的库位给它
+                // 优先在同一个区域寻找空位，实现“跨单据、同波次、近距离存储”
                 var targetLoc = emptyLocations.FirstOrDefault(l => l.Area == targetArea);
                 if (targetLoc != null) return targetLoc;
             }
 
-            // 如果没找到同区域的空位（或者它是这个波次第一个入库的），就随便找个空库位开辟新领地
             return GetEmptyLocation(validLocations, currentStocks);
         }
 
