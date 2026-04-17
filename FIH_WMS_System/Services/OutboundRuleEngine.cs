@@ -48,7 +48,7 @@ namespace FIH_WMS_System.Services
                     .Where(s => s.GoodsCode == goodsCode && (s.Qty - s.FrozenQty) > 0)
                     .Where(s =>
                     {
-                        // 👇 核心防过期防火墙！
+                        // 核心：防过期防火墙
                         // 如果定义了保质期，且 (生产日期 + 保质期 < 今天)，则该批次属于过期报废品！
                         if (s.Goods != null && s.Goods.ShelfLifeDays > 0 && s.ProduceDate.HasValue)
                         {

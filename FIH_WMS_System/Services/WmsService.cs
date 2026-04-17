@@ -947,7 +947,8 @@ namespace FIH_WMS_System.Services
                                          new
                                          {
                                              order = orderNo,
-                                             gCode = goodsCode,
+                                             //gCode = goodsCode,
+                                             gCode = realGoodsCode,
                                              lCode = pick.LocationCode,
                                              qty = pick.Qty,
                                              batch = pick.BatchNo,
@@ -962,7 +963,8 @@ namespace FIH_WMS_System.Services
                             string agvTaskNo = "AGV-" + DateTime.Now.ToString("yyyyMMddHHmmss") + "-" + pick.Id;
                             db.Execute(@"INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) 
                                          VALUES (@tNo, 1, 0, @gCode, @qty, @fromLoc, '产线接驳口1', GETDATE())",
-                                         new { tNo = agvTaskNo, gCode = goodsCode, qty = pick.Qty, fromLoc = pick.LocationCode }, transaction);
+                                         //new { tNo = agvTaskNo, gCode = goodsCode, qty = pick.Qty, fromLoc = pick.LocationCode }, transaction);
+                                         new { tNo = agvTaskNo, gCode = realGoodsCode, qty = pick.Qty, fromLoc = pick.LocationCode }, transaction);//// ✅ 改成 gCode = realGoodsCode
                         }
 
                         transaction.Commit();
