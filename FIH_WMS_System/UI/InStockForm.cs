@@ -197,8 +197,22 @@ namespace FIH_WMS_System.UI
             // 【新增】：尝试读取当前界面的数量。如果还没填(比如扫码枪刚扫完)，就默认为0(仅去探测寻找库位)。
             int currentQty = 0;
             int.TryParse(txtQty.Text.Trim(), out currentQty);
+
+
+
+            // 新增：提取生产日期
+            DateTime? produceDate = null;
+            if (dtpProduceDate.Checked)
+            {
+                produceDate = dtpProduceDate.Value.Date;
+            }
+
+
+
             // 召唤服务层的大脑 【修改】：把 currentQty(入库数量) 也传进去！
-            string recommendLoc = wmsService.GetRecommendLocation(goodsCode, currentQty, selectedStrategy);
+            //string recommendLoc = wmsService.GetRecommendLocation(goodsCode, currentQty, selectedStrategy);
+            //修改：把 produceDate 传进去
+            string recommendLoc = wmsService.GetRecommendLocation(goodsCode, currentQty, selectedStrategy, produceDate: produceDate);
 
             if (!string.IsNullOrEmpty(recommendLoc))
             {
@@ -236,18 +250,31 @@ namespace FIH_WMS_System.UI
 
                 string scannedCode = txtGoodsCode.Text.Trim();
 
-                // 核心升级：智能解析原厂或旧的 ReelId
-                // 假设扫进来的长条码是: FIH-SMT-G001-20260417-1234
+                // 升级：智能解析原厂或旧的 ReelId
+                // 假设扫进来的长条码是: FIH-SMT-G001-20260417-1234 (按 - 分割，第3段是编码，第4段是日期)
                 if (scannedCode.Contains("-") && scannedCode.Split('-').Length >= 3)
                 {
                     var parts = scannedCode.Split('-');
                     string realGoodsCode = parts[2]; // 提取出真实的物料编码 (比如 G001)
 
                     txtGoodsCode.Text = realGoodsCode; // 自动替换为干净的物料编码
-                    Utils.VoiceHelper.Speak("已识别追溯条码，正在为您自动分配库位");
+
+                    // 新增：智能提取 ReelId 中的生产日期并自动填入界面！
+                    if (parts.Length >= 4)
+                    {
+                        string dateStr = parts[3]; // 提取日期部分，如 "20260417"
+                        if (DateTime.TryParseExact(dateStr, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out DateTime parsedDate))
+                        {
+                            dtpProduceDate.Value = parsedDate;
+                            dtpProduceDate.Checked = true; // 自动打上勾！
+                        }
+                    }
+
+                    Utils.VoiceHelper.Speak("已识别追溯条码与生产日期，正在为您自动分配库位");
                 }
                 else
                 {
+                    // 如果扫进来的只是普通短码 (比如 G001)，就保持原样
                     Utils.VoiceHelper.Speak("扫码成功");
                 }
 

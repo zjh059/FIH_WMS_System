@@ -61,7 +61,8 @@ namespace FIH_WMS_System.Services
         /// 核心方法：智能推荐入库库位
         /// </summary>
         //  增加 inQty, agvX, agvY 三个参数
-        public Location RecommendLocation(string goodsCode, int inQty, int agvX, int agvY, List<Location> allLocations, List<Stock> currentStocks, InboundStrategy strategy)
+        // 在最后增加 DateTime? produceDate = null
+        public Location RecommendLocation(string goodsCode, int inQty, int agvX, int agvY, List<Location> allLocations, List<Stock> currentStocks, InboundStrategy strategy, DateTime? produceDate = null)
         {
             // 第一步：过滤出所有“状态正常”的库位 (Status == 0 表示正常空闲/可用，排除被锁定或停用的库位)
             // 兼容原有 IsUsed 字段的逻辑
@@ -96,7 +97,9 @@ namespace FIH_WMS_System.Services
                 case InboundStrategy.ByCategory:
                     //return GetLocationByCategory(goodsCode, inQty, validLocations, currentStocks);
                     //替换为多维度匹配方法
-                    return GetLocationByMultiDimensions(goodsCode, inQty, validLocations, currentStocks);
+                    //return GetLocationByMultiDimensions(goodsCode, inQty, validLocations, currentStocks);
+                    //把 produceDate 传给多维度匹配方法
+                    return GetLocationByMultiDimensions(goodsCode, inQty, validLocations, currentStocks, produceDate);
 
                 //  新增波次入库方法
                 case InboundStrategy.ByWave:
@@ -251,12 +254,36 @@ namespace FIH_WMS_System.Services
         /// 策略 E (完全版)：多维度特征识别集中存放 (同类分区策略)
         /// 对应文档：通过物料reelId识别，按物料分类、规格、品牌、用途、有效期等分类入库
         /// </summary>
-        private Location GetLocationByMultiDimensions(string goodsCode, int inQty, List<Location> validLocations, List<Stock> currentStocks)
+        /// 修改方法签名，增加 DateTime? produceDate 参数
+        private Location GetLocationByMultiDimensions(string goodsCode, int inQty, List<Location> validLocations, List<Stock> currentStocks, DateTime? produceDate = null)
         {
             // 1. 获取当前待入库物料的完整档案信息
             var currentGoods = FIH_WMS_System.Utils.DbHelper.Db.Queryable<Goods>().Where(g => g.Code == goodsCode).First();
 
             if (currentGoods == null) return GetEmptyLocation(validLocations, currentStocks);
+
+
+            // 新增核心：最高优先级匹配
+            // 如果用户传了生产日期，优先找：完全相同物料 且 生产日期完全相同 的库位！(防止不同日期的物料混放)
+            if (produceDate.HasValue)
+            {
+                var sameBatchStocks = currentStocks.Where(s =>
+                    s.GoodsCode == goodsCode &&
+                    s.ProduceDate == produceDate.Value.Date &&
+                    s.Qty > 0).ToList();
+
+                var sameBatchLocCodes = sameBatchStocks.Select(s => s.LocationCode).Distinct().ToList();
+
+                var bestLoc = validLocations.FirstOrDefault(loc =>
+                    sameBatchLocCodes.Contains(loc.Code) &&
+                    (currentStocks.Where(s => s.LocationCode == loc.Code).Sum(s => s.Qty) + inQty) <= loc.MaxCapacity);
+
+                // 如果找到了完美匹配同批次(同生产日期)的库位，直接返回！
+                if (bestLoc != null) return bestLoc;
+            }
+
+
+
 
             // 2. 核心：多维度相似度匹配！不仅仅看分类，还看品牌、规格、保质期、用途
             // 只要满足其中任意一个核心维度相同（且不为空），我们就认为它们是“同类特征物料”，可以放在一起

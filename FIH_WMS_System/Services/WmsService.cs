@@ -377,7 +377,8 @@ namespace FIH_WMS_System.Services
         /// <summary>
         /// 提供给外部 UI 调用的智能推荐入库库位接口
         /// </summary>
-        public string GetRecommendLocation(string goodsCode, int inQty, InboundStrategy strategy, int agvX = 0, int agvY = 0)
+        //public string GetRecommendLocation(string goodsCode, int inQty, InboundStrategy strategy, int agvX = 0, int agvY = 0)
+        public string GetRecommendLocation(string goodsCode, int inQty, InboundStrategy strategy, int agvX = 0, int agvY = 0, DateTime? produceDate = null)
         {
             // 1. 如果用户选择了“人工指定”，系统就不用连数据库了
             if (strategy == InboundStrategy.Manual)
@@ -395,7 +396,10 @@ namespace FIH_WMS_System.Services
                 InboundRuleEngine engine = new InboundRuleEngine();
 
                 // 4. 开始计算分配
-                Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy);
+                //Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy);
+                //把 produceDate 传给 engine
+                Location recommendedLoc = engine.RecommendLocation(goodsCode, inQty, agvX, agvY, allLocations, currentStocks, strategy, produceDate);
+
 
                 if (recommendedLoc != null)
                     return recommendedLoc.Code;
