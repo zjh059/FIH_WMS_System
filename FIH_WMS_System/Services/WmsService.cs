@@ -604,10 +604,12 @@ namespace FIH_WMS_System.Services
         {
             using (var db = new SqlConnection(connStr))
             {
+                //把原来的 INNER JOIN 改成 LEFT JOIN
+                //INNER JOIN Goods，它要求 AGV 任务里的 GoodsCode 必须在物料基础档案里存在，才能显示出来。但是料车任务的 GoodsCode 是 "料车:CART-003"，物料表里根本没有这个“物料”，所以这条任务被 SQL 滤隐藏了
                 string sql = @"
                     SELECT t.*, g.Id, g.Code, g.Name, g.Spec 
                     FROM AgvTask t
-                    INNER JOIN Goods g ON t.GoodsCode = g.Code
+                    LEFT JOIN Goods g ON t.GoodsCode = g.Code
                     ORDER BY t.CreateTime DESC";
 
                 var list = db.Query<AgvTask, Goods, AgvTask>(
@@ -665,6 +667,26 @@ namespace FIH_WMS_System.Services
                         // 3. 记录小车到达终点的日志
                         Dapper.SqlMapper.Execute(db, "INSERT INTO AgvLog (TaskNo, Action, Location, LogTime) VALUES (@t, @a, @l, GETDATE())",
                             new { t = task.TaskNo, a = "✅ 任务完成，卸载货物", l = task.ToLocation }, transaction);
+
+
+                        if (task.GoodsCode.StartsWith("料车:"))
+                        {
+                            string cartNo = task.GoodsCode.Replace("料车:", ""); // 提取出车牌号，如 CART-003
+
+                            // 1. 将料车状态重置为空闲 (0)，并把它的物理位置更新为当前送达的产线位置
+                            Dapper.SqlMapper.Execute(db, "UPDATE MobileCart SET Status = 0, CurrentLocation = @loc WHERE CartNo = @c",
+                                new { loc = task.ToLocation, c = cartNo }, transaction);
+
+                            // 2. 清空该料车上的装载明细（模拟产线工人已经把物料拿走用掉了）
+                            Dapper.SqlMapper.Execute(db, "DELETE FROM MobileCartDetail WHERE CartNo = @c", new { c = cartNo }, transaction);
+
+                            // 3. 追加一条专属的料车释放日志
+                            Dapper.SqlMapper.Execute(db, "INSERT INTO AgvLog (TaskNo, Action, Location, LogTime) VALUES (@t, @a, @l, GETDATE())",
+                                new { t = task.TaskNo, a = $"🛒 料车 [{cartNo}] 物料已被产线接收，料车释放为空闲状态", l = task.ToLocation }, transaction);
+                        }
+
+
+
 
                         // 4. 【核心智能联动】：如果这不是一个回充任务，那么送完货后，立刻派它去充电桩或待命区！
                         // 规定 TaskType: 0入库, 1出库, 2移库, 3自动回充
@@ -2083,6 +2105,99 @@ namespace FIH_WMS_System.Services
                         return true;
                     }
                     catch
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 料车管理：1. 获取当前可用的移动料车
+        // ==========================================
+        public List<MobileCart> GetAvailableCarts()
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                // 只查询状态为 0(空闲) 或 1(装载中) 的料车
+                return Dapper.SqlMapper.Query<MobileCart>(db, "SELECT * FROM MobileCart WHERE Status IN (0, 1)").ToList();
+            }
+        }
+
+        // ==========================================
+        // 料车管理：2. 将拣出的物料扫码绑定到指定料车上
+        // ==========================================
+        public bool BindGoodsToCart(string cartNo, string goodsCode, string reelId, int qty)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. 将物料写入料车的装载明细表
+                        Dapper.SqlMapper.Execute(db,
+                            "INSERT INTO MobileCartDetail (CartNo, GoodsCode, ReelId, Qty, LoadTime) VALUES (@c, @g, @r, @q, GETDATE())",
+                            new { c = cartNo, g = goodsCode, r = reelId, q = qty }, transaction);
+
+                        // 2. 更新料车主表状态为“1-装载中”
+                        Dapper.SqlMapper.Execute(db,
+                            "UPDATE MobileCart SET Status = 1 WHERE CartNo = @c",
+                            new { c = cartNo }, transaction);
+
+                        // 3. 记录一条系统审计日志
+                        Dapper.SqlMapper.Execute(db,
+                            "INSERT INTO SysOperationLog (Username, ActionType, Description, OperateTime) VALUES (@u, '料车绑定', @d, GETDATE())",
+                            new { u = Program.CurrentUsername, d = $"将 {qty} 个 [{goodsCode}] 绑定至料车 [{cartNo}]" }, transaction);
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 料车管理：3. 满载发车，呼叫 AGV 拖走整辆料车！
+        // ==========================================
+        public bool DispatchCartToLine(string cartNo, string toLocation)
+        {
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(connStr))
+            {
+                db.Open();
+                using (var transaction = db.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. 获取料车当前所在的位置（AGV需要知道去哪里拖车）
+                        string fromLoc = Dapper.SqlMapper.QueryFirstOrDefault<string>(db,
+                            "SELECT CurrentLocation FROM MobileCart WHERE CartNo = @c", new { c = cartNo }, transaction);
+
+                        if (string.IsNullOrEmpty(fromLoc)) fromLoc = "出库接驳区";
+
+                        // 2. 核心大招：生成 AGV 搬运任务！
+                        // 注意看：这里的 GoodsCode 不再是单个物料，而是“整辆料车”
+                        string agvTaskNo = "AGV-CART-" + DateTime.Now.ToString("HHmmss");
+                        Dapper.SqlMapper.Execute(db, @"
+                            INSERT INTO AgvTask (TaskNo, TaskType, Status, GoodsCode, Qty, FromLocation, ToLocation, CreateTime) 
+                            VALUES (@tNo, 1, 0, @gCode, 1, @fromLoc, @toLoc, GETDATE())",
+                            new { tNo = agvTaskNo, gCode = "料车:" + cartNo, fromLoc = fromLoc, toLoc = toLocation }, transaction);
+
+                        // 3. 将料车状态变更为“3-运输中”
+                        Dapper.SqlMapper.Execute(db, "UPDATE MobileCart SET Status = 3 WHERE CartNo = @c", new { c = cartNo }, transaction);
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch (Exception)
                     {
                         transaction.Rollback();
                         return false;

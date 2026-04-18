@@ -84,6 +84,9 @@ namespace FIH_WMS_System.UI
             cmbStrategy.DisplayMember = "Value";
             cmbStrategy.ValueMember = "Key";
             cmbStrategy.SelectedValue = OutboundStrategy.FIFO;
+
+            // 窗体加载时，刷新可用料车列表
+            LoadAvailableCarts();
         }
 
         // 常规单品出库，仅收集数据并返回 OK 交给 MainForm 处理
@@ -282,6 +285,90 @@ namespace FIH_WMS_System.UI
             }
         }
 
+
+
+        // ==========================================
+        // 料车管理：逻辑实现区
+        // ==========================================
+
+        private void LoadAvailableCarts()
+        {
+            if (cmbCart != null)
+            {
+                var carts = wms.GetAvailableCarts(); // 调用 WmsService 大脑查询数据库
+                cmbCart.DataSource = carts;
+                cmbCart.DisplayMember = "CartNo";
+                cmbCart.ValueMember = "CartNo";
+            }
+        }
+
+        // 点击 "确认装车绑定" 按钮
+        private void btnBindCart_Click(object sender, EventArgs e)
+        {
+            if (cmbCart.SelectedValue == null)
+            {
+                MessageBox.Show("请先选择一辆可用的移动料车！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string cartNo = cmbCart.SelectedValue.ToString();
+            string scannedCode = txtCartReel.Text.Trim();
+            int.TryParse(txtCartQty.Text.Trim(), out int qty);
+
+            if (string.IsNullOrEmpty(scannedCode) || qty <= 0)
+            {
+                MessageBox.Show("请输入正确的物料条码和装车数量！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 智能解析原厂或工业 ReelId，提取真实的物料编码 (防止直接把长条码存成编码)
+            string goodsCode = scannedCode;
+            if (scannedCode.Contains("-") && scannedCode.Split('-').Length >= 3)
+            {
+                goodsCode = scannedCode.Split('-')[2];
+            }
+
+            // 呼叫服务层写入料车明细
+            bool success = wms.BindGoodsToCart(cartNo, goodsCode, scannedCode, qty);
+
+            if (success)
+            {
+                Utils.VoiceHelper.Speak("装车绑定成功");
+                MessageBox.Show($"物料 [{goodsCode}] 已成功绑定至料车 [{cartNo}]！\n您可以继续扫码装车，或点击满载发车。", "绑定成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtCartReel.Clear();
+                txtCartQty.Clear();
+                txtCartReel.Focus(); // 焦点自动跳回扫码框，方便连续作业
+            }
+            else
+            {
+                MessageBox.Show("绑定失败，请检查数据库连接或确认车牌号状态！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // 点击 "满载发车(呼叫AGV)" 按钮
+        private void btnDispatchCart_Click(object sender, EventArgs e)
+        {
+            if (cmbCart.SelectedValue == null) return;
+            string cartNo = cmbCart.SelectedValue.ToString();
+
+            DialogResult res = MessageBox.Show($"确认料车 [{cartNo}] 已满载并需要发送至产线吗？\n系统将自动指派 AGV 前来拖车！", "发车确认", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (res == DialogResult.Yes)
+            {
+                // 默认发送到 "产线接驳口1"，在实际项目中这里也可以加一个下拉框让工人选目的地
+                bool success = wms.DispatchCartToLine(cartNo, "产线接驳口1");
+
+                if (success)
+                {
+                    Utils.VoiceHelper.Speak($"料车发车成功，AGV 正在前往提取料车 {cartNo}");
+                    MessageBox.Show($"🎉 发车成功！WCS 系统已接单，AGV 即将前往提取料车 [{cartNo}]。", "调度成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    LoadAvailableCarts(); // 刷新下拉框，把刚才发走的料车剔除掉
+                }
+                else
+                {
+                    MessageBox.Show("发车调度失败，请检查 AGV 通信接口！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
 
 
 

@@ -92,7 +92,7 @@ namespace FIH_WMS_System.UI
                 }
 
                 // 核心改动：触发智能分配
-                // 如果用户偷懒没填库位，就用 WmsService 帮他找！
+                // 若用户偷懒没填库位，就在 WmsService 帮他找
                 if (string.IsNullOrEmpty(InputLocCode))
                 {
                     Services.WmsService wms = new Services.WmsService();
@@ -100,7 +100,7 @@ namespace FIH_WMS_System.UI
 
                     //去下拉框抓取当前选中的入库策略
                     InboundStrategy currentStrategy = (InboundStrategy)cmbStrategy.SelectedValue;
-                    // 【修改】：把 InputGoodsCode(物料)、InputQty(数量)、currentStrategy(策略) 一起传给大脑防爆仓！
+                    // 【修改】：把 InputGoodsCode(物料)、InputQty(数量)、currentStrategy(策略) 一起传给大脑防爆仓
                     string autoLoc = wms.GetRecommendLocation(InputGoodsCode, InputQty, currentStrategy);
 
                     if (string.IsNullOrEmpty(autoLoc))

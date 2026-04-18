@@ -34,6 +34,7 @@
             tabControl1 = new TabControl();
             tpStandard = new TabPage();
             tableLayoutPanelStandard = new TableLayoutPanel();
+            lblStrategy = new Label();
             tpBOM = new TabPage();
             tableLayoutPanelBOM = new TableLayoutPanel();
             btnExecuteBOM = new Button();
@@ -48,7 +49,15 @@
             labelAddStrategy = new Label();
             cmbStrategyAdd = new ComboBox();
             btnExecuteAdd = new Button();
-            lblStrategy = new Label();
+            tpCart = new TabPage();
+            btnDispatchCart = new Button();
+            btnBindCart = new Button();
+            txtCartQty = new TextBox();
+            lblCartQty = new Label();
+            txtCartReel = new TextBox();
+            lblCartReel = new Label();
+            cmbCart = new ComboBox();
+            lblCart = new Label();
             ((System.ComponentModel.ISupportInitialize)dgvBOM).BeginInit();
             tabControl1.SuspendLayout();
             tpStandard.SuspendLayout();
@@ -57,6 +66,7 @@
             tableLayoutPanelBOM.SuspendLayout();
             tpAdditional.SuspendLayout();
             tableLayoutPanelAdd.SuspendLayout();
+            tpCart.SuspendLayout();
             SuspendLayout();
             // 
             // labelScanner
@@ -146,7 +156,7 @@
             cmbStrategy.Anchor = AnchorStyles.Left | AnchorStyles.Right;
             cmbStrategy.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbStrategy.FormattingEnabled = true;
-            cmbStrategy.Location = new Point(151, 486);
+            cmbStrategy.Location = new Point(151, 484);
             cmbStrategy.Margin = new Padding(5, 6, 5, 6);
             cmbStrategy.Name = "cmbStrategy";
             cmbStrategy.Size = new Size(1149, 39);
@@ -237,6 +247,7 @@
             tabControl1.Controls.Add(tpStandard);
             tabControl1.Controls.Add(tpBOM);
             tabControl1.Controls.Add(tpAdditional);
+            tabControl1.Controls.Add(tpCart);
             tabControl1.Dock = DockStyle.Fill;
             tabControl1.Font = new Font("微软雅黑", 10.5F, FontStyle.Regular, GraphicsUnit.Point, 134);
             tabControl1.Location = new Point(16, 19);
@@ -287,6 +298,17 @@
             tableLayoutPanelStandard.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             tableLayoutPanelStandard.Size = new Size(1305, 843);
             tableLayoutPanelStandard.TabIndex = 0;
+            // 
+            // lblStrategy
+            // 
+            lblStrategy.Anchor = AnchorStyles.Right;
+            lblStrategy.AutoSize = true;
+            lblStrategy.Location = new Point(21, 488);
+            lblStrategy.Margin = new Padding(5, 0, 5, 0);
+            lblStrategy.Name = "lblStrategy";
+            lblStrategy.Size = new Size(120, 32);
+            lblStrategy.TabIndex = 11;
+            lblStrategy.Text = "出库策略:";
             // 
             // tpBOM
             // 
@@ -451,7 +473,7 @@
             cmbStrategyAdd.Anchor = AnchorStyles.Left | AnchorStyles.Right;
             cmbStrategyAdd.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbStrategyAdd.FormattingEnabled = true;
-            cmbStrategyAdd.Location = new Point(141, 374);
+            cmbStrategyAdd.Location = new Point(141, 372);
             cmbStrategyAdd.Margin = new Padding(5, 6, 5, 6);
             cmbStrategyAdd.Name = "cmbStrategyAdd";
             cmbStrategyAdd.Size = new Size(1159, 39);
@@ -469,16 +491,96 @@
             btnExecuteAdd.UseVisualStyleBackColor = true;
             btnExecuteAdd.Click += btnExecuteAdd_Click;
             // 
-            // lblStrategy
+            // tpCart
             // 
-            lblStrategy.Anchor = AnchorStyles.Right;
-            lblStrategy.AutoSize = true;
-            lblStrategy.Location = new Point(21, 488);
-            lblStrategy.Margin = new Padding(5, 0, 5, 0);
-            lblStrategy.Name = "lblStrategy";
-            lblStrategy.Size = new Size(120, 32);
-            lblStrategy.TabIndex = 11;
-            lblStrategy.Text = "出库策略:";
+            tpCart.BackColor = SystemColors.Control;
+            tpCart.Controls.Add(btnDispatchCart);
+            tpCart.Controls.Add(btnBindCart);
+            tpCart.Controls.Add(txtCartQty);
+            tpCart.Controls.Add(lblCartQty);
+            tpCart.Controls.Add(txtCartReel);
+            tpCart.Controls.Add(lblCartReel);
+            tpCart.Controls.Add(cmbCart);
+            tpCart.Controls.Add(lblCart);
+            tpCart.Location = new Point(4, 40);
+            tpCart.Name = "tpCart";
+            tpCart.Padding = new Padding(32, 37, 32, 37);
+            tpCart.Size = new Size(1369, 917);
+            tpCart.TabIndex = 3;
+            tpCart.Text = "\U0001f6d2 移动料车装载发车";
+            // 
+            // btnDispatchCart
+            // 
+            btnDispatchCart.BackColor = Color.MediumSeaGreen;
+            btnDispatchCart.ForeColor = Color.White;
+            btnDispatchCart.Location = new Point(925, 490);
+            btnDispatchCart.Name = "btnDispatchCart";
+            btnDispatchCart.Size = new Size(347, 142);
+            btnDispatchCart.TabIndex = 0;
+            btnDispatchCart.Text = "🚀 满载发车(呼叫AGV)";
+            btnDispatchCart.UseVisualStyleBackColor = false;
+            btnDispatchCart.Click += btnDispatchCart_Click;
+            // 
+            // btnBindCart
+            // 
+            btnBindCart.BackColor = Color.SteelBlue;
+            btnBindCart.ForeColor = Color.White;
+            btnBindCart.Location = new Point(51, 490);
+            btnBindCart.Name = "btnBindCart";
+            btnBindCart.Size = new Size(347, 142);
+            btnBindCart.TabIndex = 1;
+            btnBindCart.Text = "🔗 确认装车绑定";
+            btnBindCart.UseVisualStyleBackColor = false;
+            btnBindCart.Click += btnBindCart_Click;
+            // 
+            // txtCartQty
+            // 
+            txtCartQty.Location = new Point(266, 270);
+            txtCartQty.Name = "txtCartQty";
+            txtCartQty.Size = new Size(1006, 40);
+            txtCartQty.TabIndex = 2;
+            // 
+            // lblCartQty
+            // 
+            lblCartQty.AutoSize = true;
+            lblCartQty.Location = new Point(101, 273);
+            lblCartQty.Name = "lblCartQty";
+            lblCartQty.Size = new Size(120, 32);
+            lblCartQty.TabIndex = 3;
+            lblCartQty.Text = "装车数量:";
+            // 
+            // txtCartReel
+            // 
+            txtCartReel.Location = new Point(266, 167);
+            txtCartReel.Name = "txtCartReel";
+            txtCartReel.Size = new Size(1006, 40);
+            txtCartReel.TabIndex = 4;
+            // 
+            // lblCartReel
+            // 
+            lblCartReel.AutoSize = true;
+            lblCartReel.Location = new Point(51, 170);
+            lblCartReel.Name = "lblCartReel";
+            lblCartReel.Size = new Size(170, 32);
+            lblCartReel.TabIndex = 5;
+            lblCartReel.Text = "扫描物料条码:";
+            // 
+            // cmbCart
+            // 
+            cmbCart.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbCart.Location = new Point(266, 68);
+            cmbCart.Name = "cmbCart";
+            cmbCart.Size = new Size(1006, 39);
+            cmbCart.TabIndex = 6;
+            // 
+            // lblCart
+            // 
+            lblCart.AutoSize = true;
+            lblCart.Location = new Point(51, 71);
+            lblCart.Name = "lblCart";
+            lblCart.Size = new Size(170, 32);
+            lblCart.TabIndex = 7;
+            lblCart.Text = "选择空闲料车:";
             // 
             // OutStockForm
             // 
@@ -502,6 +604,8 @@
             tpAdditional.ResumeLayout(false);
             tableLayoutPanelAdd.ResumeLayout(false);
             tableLayoutPanelAdd.PerformLayout();
+            tpCart.ResumeLayout(false);
+            tpCart.PerformLayout();
             ResumeLayout(false);
 
         }
@@ -542,5 +646,19 @@
         private System.Windows.Forms.Button btnExecuteAdd;
         private Button btnExecuteBOM;
         private Label lblStrategy;
+
+
+        // =====================================
+        // 以下为料车专属控件声明
+        // =====================================
+        private System.Windows.Forms.TabPage tpCart;
+        private System.Windows.Forms.Label lblCart;
+        private System.Windows.Forms.ComboBox cmbCart;
+        private System.Windows.Forms.Label lblCartReel;
+        private System.Windows.Forms.TextBox txtCartReel;
+        private System.Windows.Forms.Label lblCartQty;
+        private System.Windows.Forms.TextBox txtCartQty;
+        private System.Windows.Forms.Button btnBindCart;
+        private System.Windows.Forms.Button btnDispatchCart;
     }
 }
